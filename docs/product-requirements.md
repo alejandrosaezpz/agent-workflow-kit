@@ -22,6 +22,8 @@ In the intended final experience, a developer can choose `workflow` inside OpenC
 
 This should feel like a first-class execution mode, similar in status to modes like `plan` or `build`, while preserving explicit user control.
 
+For the MVP, this should be implemented through documented OpenCode extension points rather than by assuming support for adding a new built-in mode.
+
 ## Core Product Principles
 
 Agent Workflow Kit should remain:
@@ -147,6 +149,12 @@ Requirements:
 - non-destructive integration with existing OpenCode config
 - no replacement of unrelated user settings
 - workflow exposed inside the host rather than through a separate external app
+
+For `v0.1`, the validated integration model is:
+
+- a primary agent named `workflow`
+- a slash command `/workflow`
+- installed skills and instructions under OpenCode-supported paths
 
 ## Extensibility Requirements
 

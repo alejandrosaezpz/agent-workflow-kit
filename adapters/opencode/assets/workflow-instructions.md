@@ -1,6 +1,10 @@
 # Agent Workflow Kit Instructions
 
-Expose `workflow` as a first-class execution mode inside OpenCode.
+Expose `workflow` inside OpenCode through a primary agent and a slash command.
+
+The preferred entrypoint is the `workflow` primary agent.
+
+Provide `/workflow` as a convenience command that routes into that same agent.
 
 When `workflow` is selected, run the task through these visible phases in order:
 
@@ -17,6 +21,8 @@ When `workflow` is selected, run the task through these visible phases in order:
 - Prefer the smallest correct change.
 - Ask the user when material ambiguity blocks responsible progress.
 - Preserve user control over implementation decisions.
+- Allow the user to intervene between phases.
+- Treat exploration and planning as explicit checkpoint phases.
 
 ## Phase Intent
 

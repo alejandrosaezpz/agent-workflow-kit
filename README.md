@@ -1,6 +1,6 @@
 # Agent Workflow Kit
 
-Agent Workflow Kit is a lightweight open-source workflow layer for agent hosts like OpenCode.
+Agent Workflow Kit is a lightweight open-source workflow layer built for OpenCode.
 
 Its purpose is to help developers move from unstructured chat-based usage to structured development flows built around an orchestrator, specialized phases, reusable skills, and explicit outputs.
 
@@ -38,8 +38,21 @@ adapters/
     assets/
       opencode.example.json
       opencode.workflow.json
+      workflow-agent.md
+      workflow-command.md
       workflow-instructions.md
 skills/
+  agent-workflow-kit/
+    workflow-explorer/
+      SKILL.md
+    workflow-planner/
+      SKILL.md
+    workflow-implementer/
+      SKILL.md
+    workflow-reviewer/
+      SKILL.md
+    workflow-tester/
+      SKILL.md
   README.md
 src/
   adapters/
@@ -67,7 +80,7 @@ The `core` layer contains the runtime-agnostic backbone:
 
 The `skills/` directory is the intended product-facing extension surface.
 
-The system should eventually expose reusable workflow skills for hosts like OpenCode.
+The system already includes the first reusable workflow skills for hosts like OpenCode and will expand from this base.
 
 ### Adapters
 
@@ -119,6 +132,8 @@ The repository currently includes:
 - typed phase contracts
 - config loading
 - an initial OpenCode adapter contract and assets
+- the first workflow skills in OpenCode-compatible format
+- an OpenCode installer MVP
 
 The adapter contract now defines:
 
@@ -129,6 +144,24 @@ The adapter contract now defines:
 - the intended `workflow` command shape inside OpenCode
 
 The first OpenCode adapter assets now live in `adapters/opencode/assets/`.
+
+The first workflow skills now live in `skills/agent-workflow-kit/`.
+
+The OpenCode installer MVP can be run with:
+
+```bash
+npm run build
+npm run install:opencode
+```
+
+## Quick Validation Run
+
+After installation, run this 4-step check in OpenCode:
+
+1. Open a project and confirm `workflow` is available as a primary agent.
+2. Run `/workflow "summarize this repository structure"`.
+3. Confirm visible phase progression (`explorer` → `planner` → `implementer` → `reviewer` → `tester`).
+4. Confirm there is at least one checkpoint where you can redirect or approve before implementation.
 
 ## Internal Development
 

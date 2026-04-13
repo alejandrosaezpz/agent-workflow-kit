@@ -1,4 +1,5 @@
 export * from "./adapters/opencode";
+export * from "./adapters/opencode/install";
 export * from "./core/config";
 export * from "./core/contracts/agent";
 export * from "./core/orchestrator";

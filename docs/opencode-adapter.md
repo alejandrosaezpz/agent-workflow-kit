@@ -2,7 +2,7 @@
 
 This document defines the target contract for integrating Agent Workflow Kit into OpenCode.
 
-The goal is not to create a parallel interface. The goal is to install workflow capabilities into OpenCode so `workflow` becomes a native-feeling execution mode.
+The goal is not to create a parallel interface. The goal is to install workflow capabilities into OpenCode so `workflow` becomes a native-feeling execution path.
 
 ## Product Position
 
@@ -46,18 +46,14 @@ Target file:
 Rules:
 
 - preserve existing user configuration
-- merge only the Agent Workflow Kit managed section
+- merge only supported OpenCode keys managed by Agent Workflow Kit
 - avoid replacing the whole file
-- keep the managed section clearly identifiable
-
-Recommended managed key:
-
-- `agentWorkflowKit`
+- keep injected entries traceable through managed files and instruction paths
 
 Recommended strategy:
 
 - JSON merge for structured config
-- marker-based injection for prompt fragments when needed
+- copy instruction files and reference them through OpenCode's `instructions` config
 
 ### 2. Workflow Instructions
 
@@ -77,7 +73,13 @@ The adapter should install reusable skills under a dedicated namespace.
 
 Recommended target:
 
+- `skills/`
+
+In this repository, the source layout keeps them grouped under:
+
 - `skills/agent-workflow-kit/`
+
+During installation, the adapter should copy those skill directories into OpenCode's `skills/` folder so discovery works natively.
 
 Initial skill family:
 
@@ -89,22 +91,37 @@ Initial skill family:
 
 ## Workflow Exposure
 
-The target user-facing entrypoint is:
+The target user-facing workflow entry is:
 
-- `workflow`
+- a primary agent named `workflow`
+- a slash command `/workflow`
 
-Two options exist:
+Reason for this choice:
 
-1. host command
-2. slash command
+- OpenCode documents custom primary agents
+- OpenCode documents slash commands
+- OpenCode does not document adding a new built-in mode equivalent to `build` or `plan`
 
 Recommendation:
 
-1. host command
+1. use a primary agent as the real entrypoint
+2. add `/workflow` as a convenience wrapper
 
-Reason:
+This keeps the experience close to a first-class mode while staying inside documented OpenCode extension points.
 
-- it better matches the intended product shape of a first-class mode like `plan` or `build`
+## Agent Model
+
+The workflow adapter should install a primary agent called `workflow`.
+
+That agent is responsible for coordinating the visible workflow phases and delegating to subagents or skills when appropriate.
+
+## Command Model
+
+The workflow adapter should also install a custom slash command:
+
+- `/workflow`
+
+This command should route the provided task into the `workflow` primary agent.
 
 ## Phase Contract
 
@@ -124,6 +141,8 @@ The adapter should manage files like these:
 
 - `adapters/opencode/assets/opencode.workflow.json`
 - `adapters/opencode/assets/workflow-instructions.md`
+- `adapters/opencode/assets/workflow-agent.md`
+- `adapters/opencode/assets/workflow-command.md`
 - `skills/...`
 - `adapters/opencode/assets/opencode.example.json`
 
@@ -133,7 +152,38 @@ Current MVP assets now exist in the repository at:
 
 - `adapters/opencode/assets/opencode.workflow.json`
 - `adapters/opencode/assets/workflow-instructions.md`
+- `adapters/opencode/assets/workflow-agent.md`
+- `adapters/opencode/assets/workflow-command.md`
 - `adapters/opencode/assets/opencode.example.json`
+
+## Installer MVP
+
+The repository now includes an OpenCode installer MVP.
+
+Current command:
+
+```bash
+npm run build
+npm run install:opencode
+```
+
+Default behavior:
+
+- installs to `~/.config/opencode`
+- copies workflow instructions, agent, command, and skills
+- merges `opencode.json` non-destructively
+- appends the workflow instruction file to the `instructions` array if missing
+
+Optional project scope:
+
+```bash
+npm run install:opencode -- --scope=project
+```
+
+Project-scope behavior:
+
+- writes `opencode.json` in the project root
+- installs agents, commands, skills, and instructions under `.opencode/`
 
 ## Non-Destructive Rules
 
@@ -152,15 +202,18 @@ The adapter must not:
 
 ## MVP Boundary
 
-In the current MVP, the adapter contract is defined but the installation workflow is not implemented yet.
+The current MVP now includes a working installer path, but it is still intentionally minimal.
 
-That is intentional.
+What it already does:
 
-The current goal is to lock down:
+- installs workflow assets into OpenCode-supported locations
+- merges `opencode.json` non-destructively
+- installs a primary agent, slash command, and skills
+- supports global and project scope
 
-- where the adapter installs
-- what it manages
-- how it merges
-- how `workflow` should appear inside OpenCode
+What it does not yet do:
 
-before building the installer itself.
+- validate the full user experience inside a real OpenCode session
+- handle complex migration cases
+- support advanced sync and update behavior
+- provide rollback or backup management

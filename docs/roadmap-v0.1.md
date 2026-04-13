@@ -208,7 +208,16 @@ At the moment, the project already has:
 - a core prototype
 - an OpenCode adapter contract
 - initial OpenCode assets
+- the first workflow skills in OpenCode-compatible format
+- an OpenCode installer MVP
+
+Phase 2 validation has already clarified an important integration decision:
+
+- the MVP should rely on documented OpenCode extension points
+- `workflow` should be modeled as a primary agent
+- `/workflow` should be added as a custom slash command
+- the project should not assume support for adding a new built-in mode equivalent to `build` or `plan`
 
 Private maintainer helpers may exist locally, but they are intentionally outside the public roadmap and product surface.
 
-The next highest-value step after this roadmap is to validate the real integration model with OpenCode and then create the first workflow skills.
+The next highest-value step after this roadmap is to test real workflow usage inside OpenCode.

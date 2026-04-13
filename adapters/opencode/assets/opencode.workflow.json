@@ -1,17 +1,16 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "agentWorkflowKit": {
-    "enabled": true,
-    "command": "workflow",
-    "mode": "sequential",
-    "visiblePhases": [
-      "explorer",
-      "planner",
-      "implementer",
-      "reviewer",
-      "tester"
-    ],
-    "skillsRoot": "skills/agent-workflow-kit",
-    "instructionsFile": "workflow-instructions.md"
+  "agent": {
+    "workflow": {
+      "mode": "primary",
+      "description": "Primary workflow agent for structured phased execution"
+    }
+  },
+  "command": {
+    "workflow": {
+      "description": "Run the structured workflow for a task",
+      "agent": "workflow",
+      "template": "$ARGUMENTS"
+    }
   }
 }

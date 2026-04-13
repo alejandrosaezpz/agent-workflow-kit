@@ -143,3 +143,4 @@ vite.config.ts.timestamp-*
 
 # Local host integration artifacts
 .opencode/
+opencode.json

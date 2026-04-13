@@ -4,19 +4,27 @@ export type OpenCodeManagedFileType =
   | "config-fragment"
   | "skill"
   | "prompt-fragment"
+  | "agent"
+  | "command"
   | "example-config";
 
 export interface OpenCodeManagedFile {
   type: OpenCodeManagedFileType;
   source: string;
   target: string;
-  mergeStrategy: "copy" | "marker-injection" | "json-merge";
+  mergeStrategy: "copy" | "json-merge";
   required: boolean;
 }
 
 export interface OpenCodeWorkflowCommandContract {
+  name: "/workflow";
+  kind: "slash-command";
+  description: string;
+}
+
+export interface OpenCodeWorkflowAgentContract {
   name: "workflow";
-  kind: "host-command" | "slash-command";
+  mode: "primary";
   description: string;
   visiblePhases: readonly [
     "explorer",
@@ -31,11 +39,6 @@ export interface OpenCodeConfigInjectionContract {
   targetFile: string;
   mergeMode: "json-merge";
   preserveUserConfig: true;
-  managedSectionKey: "agentWorkflowKit";
-  markers: {
-    start: string;
-    end: string;
-  };
 }
 
 export interface OpenCodeWorkflowAdapterContract {
@@ -47,6 +50,7 @@ export interface OpenCodeWorkflowAdapterContract {
     globalRoot: "~/.config/opencode";
     projectRoot: "./.opencode";
   };
+  agent: OpenCodeWorkflowAgentContract;
   command: OpenCodeWorkflowCommandContract;
   configInjection: OpenCodeConfigInjectionContract;
   managedFiles: OpenCodeManagedFile[];
@@ -61,11 +65,11 @@ export const opencodeWorkflowAdapter: OpenCodeWorkflowAdapterContract = {
     globalRoot: "~/.config/opencode",
     projectRoot: "./.opencode",
   },
-  command: {
+  agent: {
     name: "workflow",
-    kind: "host-command",
+    mode: "primary",
     description:
-      "Runs the visible agent workflow through explorer, planner, implementer, reviewer, and tester.",
+      "Primary workflow agent that coordinates explorer, planner, implementer, reviewer, and tester.",
     visiblePhases: [
       "explorer",
       "planner",
@@ -74,15 +78,16 @@ export const opencodeWorkflowAdapter: OpenCodeWorkflowAdapterContract = {
       "tester",
     ],
   },
+  command: {
+    name: "/workflow",
+    kind: "slash-command",
+    description:
+      "Slash command that invokes the workflow agent with the current task or provided arguments.",
+  },
   configInjection: {
     targetFile: "opencode.json",
     mergeMode: "json-merge",
     preserveUserConfig: true,
-    managedSectionKey: "agentWorkflowKit",
-    markers: {
-      start: "AGENT WORKFLOW KIT START",
-      end: "AGENT WORKFLOW KIT END",
-    },
   },
   managedFiles: [
     {
@@ -95,14 +100,28 @@ export const opencodeWorkflowAdapter: OpenCodeWorkflowAdapterContract = {
     {
       type: "prompt-fragment",
       source: "adapters/opencode/assets/workflow-instructions.md",
-      target: "opencode.json",
-      mergeStrategy: "marker-injection",
+      target: "agent-workflow-kit/workflow-instructions.md",
+      mergeStrategy: "copy",
+      required: true,
+    },
+    {
+      type: "agent",
+      source: "adapters/opencode/assets/workflow-agent.md",
+      target: "agents/workflow.md",
+      mergeStrategy: "copy",
+      required: true,
+    },
+    {
+      type: "command",
+      source: "adapters/opencode/assets/workflow-command.md",
+      target: "commands/workflow.md",
+      mergeStrategy: "copy",
       required: true,
     },
     {
       type: "skill",
-      source: "skills/",
-      target: "skills/agent-workflow-kit/",
+      source: "skills/agent-workflow-kit/",
+      target: "skills/",
       mergeStrategy: "copy",
       required: true,
     },

@@ -1,10 +1,13 @@
 # Skills
 
-This directory is reserved for reusable workflow skills.
+This directory contains the reusable workflow skills that Agent Workflow Kit intends to install into OpenCode.
 
-The product direction is to package workflow behavior as skills and orchestrator instructions that can be installed into host agents such as OpenCode.
+The structure follows OpenCode's discovery model:
 
-Planned initial skills:
+- one directory per skill
+- one `SKILL.md` file inside each directory
+
+Current MVP skill family:
 
 - `workflow-explorer`
 - `workflow-planner`
@@ -12,4 +15,6 @@ Planned initial skills:
 - `workflow-reviewer`
 - `workflow-tester`
 
-In the current MVP, the executable behavior still lives in `src/core/` and `src/skills/default-agents.ts` while the OpenCode adapter shape is being defined.
+These are the first public workflow building blocks of the project.
+
+They are intentionally lightweight and are meant to provide a clear base that developers can adapt rather than a rigid final system.

@@ -27,6 +27,8 @@ This layer should stay independent from any specific host tool.
 
 The long-term goal is for workflow phases to be installable as reusable skills that a host agent can load and execute.
 
+The current repository already includes the first OpenCode-compatible workflow skills under `skills/agent-workflow-kit/`.
+
 ## Adapters
 
 `src/adapters/` contains host-specific integration code.
@@ -43,7 +45,9 @@ The intended OpenCode integration model is:
 
 - install globally
 - inject workflow-related configuration into the host
-- expose `workflow` as a first-class option or command
+- expose `workflow` through documented OpenCode extension points
+- use a primary agent as the main workflow entrypoint
+- provide `/workflow` as a convenience command
 - delegate to specialized phases while keeping the flow visible
 
 ## Why This Shape

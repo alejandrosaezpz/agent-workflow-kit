@@ -6,23 +6,17 @@
       "description": "Default OpenCode general agent"
     },
     "workflow": {
+      "mode": "primary",
       "model": "your-provider/your-workflow-model",
       "description": "Workflow orchestrator entrypoint for Agent Workflow Kit"
     }
   },
   "default_agent": "general",
-  "agentWorkflowKit": {
-    "enabled": true,
-    "command": "workflow",
-    "mode": "sequential",
-    "visiblePhases": [
-      "explorer",
-      "planner",
-      "implementer",
-      "reviewer",
-      "tester"
-    ],
-    "skillsRoot": "skills/agent-workflow-kit",
-    "instructionsFile": "workflow-instructions.md"
+  "command": {
+    "workflow": {
+      "description": "Run the structured workflow for a task",
+      "agent": "workflow",
+      "template": "$ARGUMENTS"
+    }
   }
 }
