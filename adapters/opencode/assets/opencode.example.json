@@ -1,0 +1,28 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "general": {
+      "model": "your-provider/your-general-model",
+      "description": "Default OpenCode general agent"
+    },
+    "workflow": {
+      "model": "your-provider/your-workflow-model",
+      "description": "Workflow orchestrator entrypoint for Agent Workflow Kit"
+    }
+  },
+  "default_agent": "general",
+  "agentWorkflowKit": {
+    "enabled": true,
+    "command": "workflow",
+    "mode": "sequential",
+    "visiblePhases": [
+      "explorer",
+      "planner",
+      "implementer",
+      "reviewer",
+      "tester"
+    ],
+    "skillsRoot": "skills/agent-workflow-kit",
+    "instructionsFile": "workflow-instructions.md"
+  }
+}

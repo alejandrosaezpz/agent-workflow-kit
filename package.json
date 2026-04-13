@@ -1,18 +1,30 @@
 {
   "name": "agent-workflow-kit",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A lightweight agent-based workflow system for structured AI-assisted software development.",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "adapters",
+    "skills",
+    "docs"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alejandrosaezpz/agent-workflow-kit.git"
   },
-  "keywords": [],
+  "keywords": [
+    "agents",
+    "workflow",
+    "opencode"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/alejandrosaezpz/agent-workflow-kit/issues"
@@ -20,7 +32,6 @@
   "homepage": "https://github.com/alejandrosaezpz/agent-workflow-kit#readme",
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "ts-node": "^10.9.2",
     "typescript": "^6.0.2"
   }
 }

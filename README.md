@@ -1,125 +1,159 @@
 # Agent Workflow Kit
 
-Agent Workflow Kit is a lightweight, open-source system that transforms how developers use AI in software development — from unstructured chat interactions to structured, agent-based workflows.
+Agent Workflow Kit is a lightweight open-source workflow layer for agent hosts like OpenCode.
 
----
+Its purpose is to help developers move from unstructured chat-based usage to structured development flows built around an orchestrator, specialized phases, reusable skills, and explicit outputs.
 
-## Problem
+## What This Is
 
-Today, most developers use AI as a chat:
+Agent Workflow Kit is designed as:
 
-- Analysis, implementation, and validation are mixed together
-- Context is easily lost
-- Outputs are inconsistent and hard to reproduce
-- There is no clear workflow
+- a workflow layer, not a heavyweight framework
+- an integration for agent hosts, not a separate developer app
+- a transparent orchestration model, not a black box
+- a globally installed system with optional local overrides
 
-The issue is not the AI itself, but how it is used.
+## What This Is Not
 
----
+It is not intended to be:
 
-## Solution
+- a standalone CLI product
+- a repo generator
+- an autonomous system that acts without control
+- a complex framework with hardcoded behavior
 
-Agent Workflow Kit introduces a structured workflow based on specialized agents coordinated by a central orchestrator.
+## Architecture
 
-Instead of asking everything in a single conversation, tasks are executed through a clear, step-by-step process.
+The target architecture is:
 
----
+```text
+docs/
+  architecture.md
+  internal-workflow.md
+  opencode-adapter.md
+  product-requirements.md
+  roadmap-v0.1.md
+adapters/
+  opencode/
+    assets/
+      opencode.example.json
+      opencode.workflow.json
+      workflow-instructions.md
+skills/
+  README.md
+src/
+  adapters/
+    opencode/
+      index.ts
+  core/
+    config.ts
+    orchestrator.ts
+    contracts/
+      agent.ts
+  skills/
+    default-agents.ts
+  index.ts
+```
 
-## How it works
+### Core
 
-When using the workflow:
+The `core` layer contains the runtime-agnostic backbone:
 
-1. The user defines a task
-2. The system executes a structured flow:
-
-   - Explorer analyzes the codebase
-   - Planner defines a solution
-   - Implementer proposes or applies changes
-   - Reviewer evaluates quality and risks
-   - Tester validates the result
-
-3. The process is visible, repeatable, and controllable
-
----
-
-## Core Concepts
-
-### Orchestrator
-Coordinates the workflow and decides which agents should act.
-
-### Agents
-Specialized roles with a single responsibility:
-
-- Explorer → understands the codebase
-- Planner → defines the approach
-- Implementer → performs changes
-- Reviewer → checks quality
-- Tester → validates results
+- typed workflow contracts
+- config resolution
+- orchestrator sequencing
 
 ### Skills
-Reusable capabilities that agents can use:
-- repository analysis
-- change planning
-- impact evaluation
-- code review
 
----
+The `skills/` directory is the intended product-facing extension surface.
 
-## Key Principles
+The system should eventually expose reusable workflow skills for hosts like OpenCode.
 
-- Lightweight: no unnecessary complexity
-- Transparent: the process is not a black box
-- Customizable: adaptable to any project
-- Educational: teaches structured AI usage
-- Non-intrusive: does not force changes in your codebase
+### Adapters
 
----
+Adapters connect the core workflow model to a specific host.
 
-## Installation
+Current direction:
 
-Coming soon.
+- `opencode` is the real product target
 
-Agent Workflow Kit will be installable globally and integrated into OpenCode as a new workflow mode.
+The OpenCode integration contract is documented in `docs/opencode-adapter.md`.
 
----
+## Workflow Model
 
-## Roadmap
+The default workflow remains intentionally simple:
 
-### v0.1
-- Global installer
-- Orchestrator
-- Explorer, Planner, Reviewer agents
-- Basic skills
-- Initial workflow
+1. `explorer`
+2. `planner`
+3. `implementer`
+4. `reviewer`
+5. `tester`
 
-### v0.2
-- Implementer agent
-- Improved decision logic
-- Custom project configuration
+This workflow is sequential, visible, and designed to stay lightweight.
 
-### v0.3
-- Tester agent
-- Advanced workflows
-- Presets for different project types
+## Configuration
 
----
+Global config:
 
-## Project Structure
-agent-workflow-kit/
-├─ src/
-├─ templates/
-├─ docs/
-└─ examples/
+```text
+~/.config/agent-workflow-kit/config.json
+```
 
----
+Optional local config:
 
-## Contributing
+```text
+.agent-workflow-kit.json
+```
 
-This project is in early stage.
+Resolution order for config:
 
-Contributions, ideas, and feedback are welcome.
+1. internal defaults
+2. global config
+3. local project config
 
----
+## Current MVP
+
+The repository currently includes:
+
+- a core orchestrator prototype
+- typed phase contracts
+- config loading
+- an initial OpenCode adapter contract and assets
+
+The adapter contract now defines:
+
+- supported install scopes
+- target OpenCode paths
+- config injection rules
+- managed files
+- the intended `workflow` command shape inside OpenCode
+
+The first OpenCode adapter assets now live in `adapters/opencode/assets/`.
+
+## Internal Development
+
+This repository should be developed using the same workflow mindset it promotes.
+
+- internal process: `docs/internal-workflow.md`
+- technical shape: `docs/architecture.md`
+- product target: `docs/product-requirements.md`
+- execution plan: `docs/roadmap-v0.1.md`
+
+Private maintainer notes or local installation artifacts should stay outside the public product surface and remain ignored by git.
+
+## Recommended Direction
+
+Option 1, recommended:
+
+- build `core + skills + opencode adapter`
+
+Option 2:
+
+- build extra tooling before validating the real OpenCode integration
+
+Recommendation:
+
+- use Option 1, because it aligns with how adjacent systems like Agent Teams Lite and its extensions integrate with OpenCode and similar hosts.
 
 ## License
 
