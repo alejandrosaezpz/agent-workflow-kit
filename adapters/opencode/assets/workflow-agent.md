@@ -17,3 +17,5 @@ Pause at meaningful checkpoints, especially after exploration and planning, so t
 
 Use installed skills and subagents when they are relevant.
 Do not collapse the workflow into a single opaque response.
+
+If the command asks to run a direct subagent (for example `Run direct subagent `explorer``), create that focused subagent execution using the provided query instead of running the full default flow.

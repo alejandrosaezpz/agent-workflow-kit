@@ -19,12 +19,42 @@ export interface WorkflowSettings {
   enabledAgents: AgentRole[];
 }
 
+export interface ContextStoreSettings {
+  kind: "file" | "memory";
+  filePath?: string;
+}
+
+export interface ContextRetentionSettings {
+  maxRuns: number;
+  maxDurableArtifactsPerRun: number;
+  maxEventsPerRun: number;
+}
+
+export interface ContextBudgetSettings {
+  maxWorkflowTaskChars: number;
+  maxSubagentTaskChars: number;
+  maxRehydratedContextChars: number;
+  maxClarificationChars: number;
+  maxEstimatedTrimmedTokensWarning: number;
+  perRoleTaskCharLimit: Partial<Record<AgentRole, number>>;
+}
+
+export interface ContextSettings {
+  enabled: boolean;
+  store: ContextStoreSettings;
+  rehydrateWorkflowArtifacts: number;
+  rehydrateSubagentArtifacts: number;
+  retention: ContextRetentionSettings;
+  budget: ContextBudgetSettings;
+}
+
 export interface AgentWorkflowKitConfig {
   version: number;
   orchestrator: {
     mode: "sequential";
   };
   workflow: WorkflowSettings;
+  context: ContextSettings;
   agents: Partial<Record<AgentRole, AgentSettings>>;
 }
 

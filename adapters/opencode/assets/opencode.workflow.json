@@ -11,6 +11,31 @@
       "description": "Run the structured workflow for a task",
       "agent": "workflow",
       "template": "$ARGUMENTS"
+    },
+    "explorer": {
+      "description": "Run explorer subagent directly for a focused query",
+      "agent": "workflow",
+      "template": "Run direct subagent `explorer` for this request:\n$ARGUMENTS"
+    },
+    "planner": {
+      "description": "Run planner subagent directly for a focused query",
+      "agent": "workflow",
+      "template": "Run direct subagent `planner` for this request:\n$ARGUMENTS"
+    },
+    "implementer": {
+      "description": "Run implementer subagent directly for a focused query",
+      "agent": "workflow",
+      "template": "Run direct subagent `implementer` for this request:\n$ARGUMENTS"
+    },
+    "reviewer": {
+      "description": "Run reviewer subagent directly for a focused query",
+      "agent": "workflow",
+      "template": "Run direct subagent `reviewer` for this request:\n$ARGUMENTS"
+    },
+    "tester": {
+      "description": "Run tester subagent directly for a focused query",
+      "agent": "workflow",
+      "template": "Run direct subagent `tester` for this request:\n$ARGUMENTS"
     }
   }
 }

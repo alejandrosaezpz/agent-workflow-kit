@@ -32,6 +32,33 @@ export const defaultConfig: AgentWorkflowKitConfig = {
     mode: "sequential",
     enabledAgents: defaultEnabledAgents,
   },
+  context: {
+    enabled: true,
+    store: {
+      kind: "file",
+    },
+    rehydrateWorkflowArtifacts: 3,
+    rehydrateSubagentArtifacts: 2,
+    retention: {
+      maxRuns: 40,
+      maxDurableArtifactsPerRun: 6,
+      maxEventsPerRun: 80,
+    },
+    budget: {
+      maxWorkflowTaskChars: 6000,
+      maxSubagentTaskChars: 3500,
+      maxRehydratedContextChars: 1800,
+      maxClarificationChars: 700,
+      maxEstimatedTrimmedTokensWarning: 500,
+      perRoleTaskCharLimit: {
+        explorer: 3200,
+        planner: 3200,
+        implementer: 2600,
+        reviewer: 2200,
+        tester: 2200,
+      },
+    },
+  },
   agents: Object.fromEntries(
     agentRoles.map((role) => [role, { enabled: true, skills: [] }]),
   ) as AgentWorkflowKitConfig["agents"],
@@ -103,6 +130,55 @@ function mergeConfig(
       enabledAgents:
         override.workflow?.enabledAgents ?? base.workflow.enabledAgents,
     },
+    context: {
+      enabled: override.context?.enabled ?? base.context.enabled,
+      store: {
+        kind: override.context?.store?.kind ?? base.context.store.kind,
+        ...(override.context?.store?.filePath ?? base.context.store.filePath
+          ? {
+              filePath:
+                override.context?.store?.filePath ?? base.context.store.filePath,
+            }
+          : {}),
+      },
+      rehydrateWorkflowArtifacts:
+        override.context?.rehydrateWorkflowArtifacts ??
+        base.context.rehydrateWorkflowArtifacts,
+      rehydrateSubagentArtifacts:
+        override.context?.rehydrateSubagentArtifacts ??
+        base.context.rehydrateSubagentArtifacts,
+      retention: {
+        maxRuns:
+          override.context?.retention?.maxRuns ?? base.context.retention.maxRuns,
+        maxDurableArtifactsPerRun:
+          override.context?.retention?.maxDurableArtifactsPerRun ??
+          base.context.retention.maxDurableArtifactsPerRun,
+        maxEventsPerRun:
+          override.context?.retention?.maxEventsPerRun ??
+          base.context.retention.maxEventsPerRun,
+      },
+      budget: {
+        maxWorkflowTaskChars:
+          override.context?.budget?.maxWorkflowTaskChars ??
+          base.context.budget.maxWorkflowTaskChars,
+        maxSubagentTaskChars:
+          override.context?.budget?.maxSubagentTaskChars ??
+          base.context.budget.maxSubagentTaskChars,
+        maxRehydratedContextChars:
+          override.context?.budget?.maxRehydratedContextChars ??
+          base.context.budget.maxRehydratedContextChars,
+        maxClarificationChars:
+          override.context?.budget?.maxClarificationChars ??
+          base.context.budget.maxClarificationChars,
+        maxEstimatedTrimmedTokensWarning:
+          override.context?.budget?.maxEstimatedTrimmedTokensWarning ??
+          base.context.budget.maxEstimatedTrimmedTokensWarning,
+        perRoleTaskCharLimit: {
+          ...base.context.budget.perRoleTaskCharLimit,
+          ...override.context?.budget?.perRoleTaskCharLimit,
+        },
+      },
+    },
     agents: mergedAgents,
   };
 }
@@ -114,6 +190,33 @@ function cloneConfig(config: AgentWorkflowKitConfig): AgentWorkflowKitConfig {
     workflow: {
       mode: config.workflow.mode,
       enabledAgents: [...config.workflow.enabledAgents],
+    },
+    context: {
+      enabled: config.context.enabled,
+      store: {
+        kind: config.context.store.kind,
+        ...(config.context.store.filePath
+          ? { filePath: config.context.store.filePath }
+          : {}),
+      },
+      rehydrateWorkflowArtifacts: config.context.rehydrateWorkflowArtifacts,
+      rehydrateSubagentArtifacts: config.context.rehydrateSubagentArtifacts,
+      retention: {
+        maxRuns: config.context.retention.maxRuns,
+        maxDurableArtifactsPerRun: config.context.retention.maxDurableArtifactsPerRun,
+        maxEventsPerRun: config.context.retention.maxEventsPerRun,
+      },
+      budget: {
+        maxWorkflowTaskChars: config.context.budget.maxWorkflowTaskChars,
+        maxSubagentTaskChars: config.context.budget.maxSubagentTaskChars,
+        maxRehydratedContextChars: config.context.budget.maxRehydratedContextChars,
+        maxClarificationChars: config.context.budget.maxClarificationChars,
+        maxEstimatedTrimmedTokensWarning:
+          config.context.budget.maxEstimatedTrimmedTokensWarning,
+        perRoleTaskCharLimit: {
+          ...config.context.budget.perRoleTaskCharLimit,
+        },
+      },
     },
     agents: Object.fromEntries(
       agentRoles.map((role) => [
