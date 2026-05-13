@@ -1,5 +1,7 @@
 # Agent Workflow Kit
 
+> Project status: this project is still in progress and not yet ready as a final `v1.0.0` release.
+
 Agent Workflow Kit is a lightweight open-source workflow layer built for OpenCode.
 
 Its purpose is to help developers move from unstructured chat-based usage to structured development flows built around an orchestrator, specialized phases, reusable skills, and explicit outputs.
@@ -124,16 +126,25 @@ Resolution order for config:
 2. global config
 3. local project config
 
-## Current MVP
+## Current Status
 
-The repository currently includes:
+Current maturity: `v0.1` codebase with `v1.0` hardening in progress.
 
-- a core orchestrator prototype
-- typed phase contracts
-- config loading
-- an initial OpenCode adapter contract and assets
-- the first workflow skills in OpenCode-compatible format
-- an OpenCode installer MVP
+Implemented now:
+
+- core orchestrator with typed workflow runtime contracts
+- workflow and direct subagent execution paths
+- interaction checkpoints for clarification and approval
+- context persistence with bounded retention and rehydration
+- context-budget controls and post-run reports
+- OpenCode adapter installer with idempotency and merge-safety tests
+- CI baseline (`build`, `check`, `test`)
+
+Still pending before `v1.0.0`:
+
+- complete real-session OpenCode validation evidence (`docs/phase9-validation.md`)
+- lock compatibility claims and limits with final validation evidence
+- finalize public release notes and README polish for release
 
 The adapter contract now defines:
 
@@ -147,7 +158,7 @@ The first OpenCode adapter assets now live in `adapters/opencode/assets/`.
 
 The first workflow skills now live in `skills/agent-workflow-kit/`.
 
-The OpenCode installer MVP can be run with:
+The OpenCode installer can be run with:
 
 ```bash
 npm run build
@@ -163,6 +174,10 @@ After installation, run this 4-step check in OpenCode:
 3. Confirm visible phase progression (`explorer` → `planner` → `implementer` → `reviewer` → `tester`).
 4. Confirm there is at least one checkpoint where you can redirect or approve before implementation.
 
+For full `v1.0` validation tracking, use:
+
+- `docs/phase9-validation.md`
+
 ## Internal Development
 
 This repository should be developed using the same workflow mindset it promotes.
@@ -170,7 +185,8 @@ This repository should be developed using the same workflow mindset it promotes.
 - internal process: `docs/internal-workflow.md`
 - technical shape: `docs/architecture.md`
 - product target: `docs/product-requirements.md`
-- execution plan: `docs/roadmap-v0.1.md`
+- execution plan: `docs/roadmap-v1.0.md`
+- OpenCode compatibility: `docs/opencode-compatibility-v1.md`
 
 Private maintainer notes or local installation artifacts should stay outside the public product surface and remain ignored by git.
 

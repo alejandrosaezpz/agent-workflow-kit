@@ -485,12 +485,50 @@ export class Orchestrator {
         warningState: budgetWarningState,
       });
 
-      const result = await agent.run(taskForRole, {
-        task: taskForRole,
-        cwd,
-        config: resolvedConfig.config,
-        previousResults: results,
-      });
+      let result: AgentResult;
+
+      try {
+        result = await agent.run(taskForRole, {
+          task: taskForRole,
+          cwd,
+          config: resolvedConfig.config,
+          previousResults: results,
+        });
+      } catch (error) {
+        activeStatus = "failed";
+        const message = this.getErrorMessage(error);
+        this.pushEvent(events, {
+          runId,
+          type: "run_failed",
+          reason: `${role} failed during execution`,
+          contextRef: {
+            artifactIds: artifacts.map((artifact) => artifact.id),
+          },
+          payload: {
+            role,
+            message,
+          },
+        });
+
+        return this.finalizeWorkflowRunResult(
+          this.buildWorkflowRunResult({
+            runId,
+            task,
+            cwd,
+            configSources: resolvedConfig.loadedSources,
+            status: activeStatus,
+            startedAt,
+            routing,
+            artifacts,
+            events,
+            results,
+            summary: `Workflow failed while running ${role}.`,
+            explanation:
+              "Execution stopped because a workflow subagent raised an error during execution.",
+          }),
+          contextStore,
+        );
+      }
 
       results.push(result);
 
@@ -767,12 +805,74 @@ export class Orchestrator {
       },
     });
 
-    const result = await agent.run(effectiveTask, {
-      task: effectiveTask,
-      cwd,
-      config: resolvedConfig.config,
-      previousResults: [],
-    });
+    let result: AgentResult;
+
+    try {
+      result = await agent.run(effectiveTask, {
+        task: effectiveTask,
+        cwd,
+        config: resolvedConfig.config,
+        previousResults: [],
+      });
+    } catch (error) {
+      const message = this.getErrorMessage(error);
+      this.pushEvent(events, {
+        runId,
+        type: "run_failed",
+        reason: `${role} failed during direct execution`,
+        payload: {
+          role,
+          message,
+        },
+      });
+
+      const failedAt = this.nowIso();
+      const failedWorkflowRun: WorkflowRun = {
+        id: runId,
+        kind: "subagent",
+        task,
+        requestedRole: role,
+        cwd,
+        status: "failed",
+        createdAt: startedAt,
+        updatedAt: failedAt,
+        routing,
+        artifacts: [],
+        events,
+      };
+
+      const failedOutcome: RunOutcome = {
+        runId,
+        status: "failed",
+        summary: `Direct subagent run failed for ${role}.`,
+        explanation: `Execution stopped because ${role} raised an error during direct invocation. ${this.buildOutcomeExplanation(
+          this.buildRunReport(failedWorkflowRun),
+        )}`.trim(),
+        artifactIds: [],
+        report: this.buildRunReport(failedWorkflowRun),
+      };
+
+      const failedResult: SubagentRunResult = {
+        runId,
+        task,
+        cwd,
+        requestedRole: role,
+        configSources: resolvedConfig.loadedSources,
+        result: {
+          role,
+          summary: `Execution failed: ${message}`,
+          details: { error: message },
+        },
+        workflowRun: failedWorkflowRun,
+        outcome: failedOutcome,
+      };
+
+      if (contextStore) {
+        await contextStore.saveRun(failedWorkflowRun);
+      }
+
+      return failedResult;
+    }
 
     const artifact = this.createArtifact(result.role, result.summary, result.details);
 
@@ -1119,5 +1219,13 @@ export class Orchestrator {
     budget: ResolvedConfig["config"]["context"]["budget"],
   ): number {
     return budget.perRoleTaskCharLimit[role] ?? fallback;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.trim().length > 0) {
+      return error.message;
+    }
+
+    return "Unknown execution error";
   }
 }

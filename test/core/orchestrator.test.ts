@@ -5,6 +5,7 @@ import { Orchestrator } from "../../src/core/orchestrator";
 import { InMemoryWorkflowContextStore } from "../../src/core/context-store";
 import { defaultAgents } from "../../src/skills/default-agents";
 import { defaultConfig, type ResolvedConfig } from "../../src/core/config";
+import { type AgentDefinition } from "../../src/core/contracts/agent";
 
 function makeResolvedConfig(
   budgetOverrides?: Partial<ResolvedConfig["config"]["context"]["budget"]>,
@@ -311,4 +312,70 @@ test("runSubagent applies per-role task budget override", async () => {
       (event.payload as { field?: string }).field === "role_task",
   );
   assert.ok(Boolean(roleBudgetEvent));
+});
+
+test("runWorkflow returns failed outcome when a subagent throws", async () => {
+  const failingAgents: AgentDefinition[] = defaultAgents.map((agent) => {
+    if (agent.role !== "planner") {
+      return agent;
+    }
+
+    return {
+      ...agent,
+      async run() {
+        throw new Error("planner explosion");
+      },
+    };
+  });
+  const orchestrator = new Orchestrator(failingAgents);
+
+  const result = await orchestrator.runWorkflow(
+    "trigger planner failure",
+    "/tmp/workspace",
+    makeResolvedConfig(),
+  );
+
+  assert.equal(result.outcome.status, "failed");
+  assert.equal(result.workflowRun.status, "failed");
+  assert.ok(
+    result.workflowRun.events.some(
+      (event) =>
+        event.type === "run_failed" &&
+        (event.payload as { message?: string }).message === "planner explosion",
+    ),
+  );
+});
+
+test("runSubagent returns failed outcome when the subagent throws", async () => {
+  const failingAgents: AgentDefinition[] = defaultAgents.map((agent) => {
+    if (agent.role !== "reviewer") {
+      return agent;
+    }
+
+    return {
+      ...agent,
+      async run() {
+        throw new Error("reviewer failed hard");
+      },
+    };
+  });
+  const orchestrator = new Orchestrator(failingAgents);
+
+  const result = await orchestrator.runSubagent(
+    "reviewer",
+    "trigger reviewer failure",
+    "/tmp/workspace",
+    makeResolvedConfig(),
+  );
+
+  assert.equal(result.outcome.status, "failed");
+  assert.equal(result.workflowRun.status, "failed");
+  assert.equal(result.result.role, "reviewer");
+  assert.ok(
+    result.workflowRun.events.some(
+      (event) =>
+        event.type === "run_failed" &&
+        (event.payload as { message?: string }).message === "reviewer failed hard",
+    ),
+  );
 });

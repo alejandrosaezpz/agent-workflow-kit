@@ -2,7 +2,7 @@
 
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 
 import {
   type OpenCodeInstallScope,
@@ -12,6 +12,7 @@ import {
 export interface InstallOptions {
   scope: OpenCodeInstallScope;
   cwd: string;
+  packageRoot?: string;
 }
 
 export interface InstallResult {
@@ -22,7 +23,7 @@ export interface InstallResult {
 }
 
 export function installOpenCodeAdapter(options: InstallOptions): InstallResult {
-  const packageRoot = resolve(__dirname, "../../..");
+  const packageRoot = options.packageRoot ?? resolve(__dirname, "../../..");
   const rootDir =
     options.scope === "global"
       ? join(homedir(), ".config", "opencode")
@@ -84,7 +85,10 @@ function buildMergedConfig(
   );
 
   const merged = deepMerge(normalizedCurrentConfig, fragmentConfig);
-  const instructions = ensureStringArray((merged as { instructions?: unknown }).instructions);
+  const instructions = ensureStringArray(
+    (merged as { instructions?: unknown }).instructions,
+    "instructions",
+  );
 
   if (!instructions.includes(relativeInstructionsPath)) {
     instructions.push(relativeInstructionsPath);
@@ -103,19 +107,35 @@ function removeLegacyWorkflowKeys(config: Record<string, unknown>): Record<strin
 }
 
 function readJsonFile(filePath: string): Record<string, unknown> {
+  const raw = readFileSync(filePath, "utf8");
+  let parsed: unknown;
+
   try {
-    return JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
+    parsed = JSON.parse(raw);
   } catch {
     throw new Error(`Invalid JSON file: ${filePath}`);
   }
+
+  if (!isPlainObject(parsed)) {
+    throw new Error(`Invalid JSON object in file: ${filePath}`);
+  }
+
+  return parsed;
 }
 
-function ensureStringArray(value: unknown): string[] {
+function ensureStringArray(value: unknown, fieldName: string): string[] {
   if (!Array.isArray(value)) {
+    if (value !== undefined) {
+      throw new Error(`Invalid '${fieldName}' value: expected an array of strings`);
+    }
     return [];
   }
 
-  return value.filter((entry): entry is string => typeof entry === "string");
+  if (value.some((entry) => typeof entry !== "string")) {
+    throw new Error(`Invalid '${fieldName}' value: expected an array of strings`);
+  }
+
+  return value;
 }
 
 function deepMerge(
@@ -143,10 +163,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 function toPortableRelativePath(fromDir: string, targetPath: string): string {
-  const relative = targetPath.startsWith(fromDir)
-    ? targetPath.slice(fromDir.length + 1)
-    : targetPath;
-  return relative.split("\\").join("/");
+  return relative(fromDir, targetPath).split("\\").join("/");
 }
 
 function parseScope(argv: string[]): OpenCodeInstallScope {

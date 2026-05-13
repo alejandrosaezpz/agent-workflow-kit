@@ -39,11 +39,11 @@ Current execution log for this roadmap:
   - completed: Phase 5 (Direct Subagent Entry Points)
   - completed: Phase 6 (Context Persistence Without Context Bloat)
   - partial: Phase 7 (Token Efficiency And Context Budgeting)
-  - partial: Phase 8 (Observability And Workflow Traceability)
-  - pending: Phase 9 (Real OpenCode Validation)
-  - partial: Phase 10 (Stabilization, CI And Test Coverage)
-  - pending: Phase 11 (OpenCode Compatibility And Adapter Stability)
-  - pending: Phase 12 (OSS And Public Release Readiness)
+  - completed: Phase 8 (Observability And Workflow Traceability)
+  - partial: Phase 9 (Real OpenCode Validation)
+  - completed: Phase 10 (Stabilization, CI And Test Coverage)
+  - completed: Phase 11 (OpenCode Compatibility And Adapter Stability)
+  - partial: Phase 12 (OSS And Public Release Readiness)
 
 - completed: `docs/runtime-model-v1.md` created with `v1.0` runtime contracts and lifecycle model
 - completed: base workflow runtime contracts added in `src/core/contracts/workflow.ts`
@@ -78,7 +78,19 @@ Current execution log for this roadmap:
 - completed: tests now cover budget-warning threshold behavior (`test/core/orchestrator.test.ts`)
 - completed: per-role task budget presets are now configurable (`perRoleTaskCharLimit`) and enforced in workflow/subagent execution
 - completed: tests now cover per-role budget enforcement and `role_task` budget events (`test/core/orchestrator.test.ts`)
+- completed: workflow and direct subagent failure paths now return structured `failed` outcomes with `run_failed` events (`src/core/orchestrator.ts`)
+- completed: runtime config now validates override shape and resolved constraints for roles, context, retention, and budget settings (`src/core/config.ts`, `test/core/config.test.ts`)
+- completed: OpenCode installer now has idempotency and merge-safety tests, including invalid `instructions` guardrails (`test/adapters/opencode/install.test.ts`)
+- completed: file-backed context store now has persistence, pruning, and invalid-JSON coverage (`test/core/context-store.test.ts`)
+- completed: CI baseline now runs build, typecheck, and tests on push and pull_request (`.github/workflows/ci.yml`)
+- completed: Phase 9 validation protocol and case matrix are now documented for real OpenCode sessions (`docs/phase9-validation.md`)
+- completed: OpenCode compatibility boundaries, stability levels, and release validation requirements are now documented (`docs/opencode-compatibility-v1.md`)
+- completed: README now reflects implemented behavior, current limits, and `v1.0` execution references (`README.md`)
+- completed: Phase 8 observability criteria are covered through structured events, compact trace reports, and post-run explanations (`src/core/orchestrator.ts`, `src/core/contracts/workflow.ts`, `test/core/orchestrator.test.ts`)
+- completed: Phase 10 stabilization criteria are covered with expanded automated tests plus CI quality gates (`test/**/*.test.ts`, `.github/workflows/ci.yml`)
+- completed: Phase 11 compatibility criteria are covered with explicit adapter boundary, stability levels, and fallback/release validation guidance (`docs/opencode-adapter.md`, `docs/opencode-compatibility-v1.md`)
 - next: add quality-signals to compare routing outcomes under budget pressure (Phase 7)
+- next: execute Phase 9 validation cases in real OpenCode sessions and attach evidence
 - next: document context inspection and retention-tuning examples in public docs (Phase 12)
 
 This section should be updated as each roadmap phase lands so contributors can see what is done and what comes next.

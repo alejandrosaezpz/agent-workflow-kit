@@ -156,9 +156,9 @@ Current MVP assets now exist in the repository at:
 - `adapters/opencode/assets/workflow-command.md`
 - `adapters/opencode/assets/opencode.example.json`
 
-## Installer MVP
+## Installer
 
-The repository now includes an OpenCode installer MVP.
+The repository includes a working OpenCode installer.
 
 Current command:
 
@@ -200,9 +200,9 @@ The adapter must not:
 - assume the user only uses Agent Workflow Kit
 - hardcode project-specific values into global config
 
-## MVP Boundary
+## Current Boundary
 
-The current MVP now includes a working installer path, but it is still intentionally minimal.
+The current implementation includes a working installer path, but remains intentionally minimal.
 
 What it already does:
 
@@ -217,3 +217,12 @@ What it does not yet do:
 - handle complex migration cases
 - support advanced sync and update behavior
 - provide rollback or backup management
+
+## Compatibility And Stability Notes
+
+Compatibility expectations for `v1.0` are documented in:
+
+- `docs/opencode-compatibility-v1.md`
+
+This adapter document defines the integration contract.
+The compatibility document defines current stability level, known limits, and release expectations.

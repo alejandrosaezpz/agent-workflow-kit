@@ -89,6 +89,8 @@ export function resolveConfig(cwd: string): ResolvedConfig {
     loadedSources.push(localConfigPath);
   }
 
+  validateConfig(config);
+
   return {
     config,
     globalConfigPath,
@@ -99,12 +101,16 @@ export function resolveConfig(cwd: string): ResolvedConfig {
 
 function readConfigFile(filePath: string): Partial<AgentWorkflowKitConfig> {
   const raw = readFileSync(filePath, "utf8");
+  let parsed: unknown;
 
   try {
-    return JSON.parse(raw) as Partial<AgentWorkflowKitConfig>;
+    parsed = JSON.parse(raw);
   } catch {
     throw new Error(`Invalid JSON in config file: ${filePath}`);
   }
+
+  validateConfigOverride(parsed, filePath);
+  return parsed;
 }
 
 function mergeConfig(
@@ -229,4 +235,207 @@ function cloneConfig(config: AgentWorkflowKitConfig): AgentWorkflowKitConfig {
       ]),
     ) as AgentWorkflowKitConfig["agents"],
   };
+}
+
+function validateConfigOverride(value: unknown, source: string): asserts value is Partial<AgentWorkflowKitConfig> {
+  if (!isPlainObject(value)) {
+    throw new Error(`Invalid config shape in file: ${source}`);
+  }
+
+  if (value.version !== undefined && !isPositiveNumber(value.version)) {
+    throw new Error(`Invalid 'version' in config file: ${source}`);
+  }
+
+  if (value.workflow !== undefined) {
+    if (!isPlainObject(value.workflow)) {
+      throw new Error(`Invalid 'workflow' section in config file: ${source}`);
+    }
+
+    if (
+      value.workflow.enabledAgents !== undefined &&
+      (!Array.isArray(value.workflow.enabledAgents) ||
+        value.workflow.enabledAgents.some((role) => !isAgentRole(role)))
+    ) {
+      throw new Error(`Invalid 'workflow.enabledAgents' in config file: ${source}`);
+    }
+  }
+
+  if (value.context !== undefined) {
+    if (!isPlainObject(value.context)) {
+      throw new Error(`Invalid 'context' section in config file: ${source}`);
+    }
+
+    if (value.context.enabled !== undefined && typeof value.context.enabled !== "boolean") {
+      throw new Error(`Invalid 'context.enabled' in config file: ${source}`);
+    }
+
+    if (value.context.store !== undefined) {
+      if (!isPlainObject(value.context.store)) {
+        throw new Error(`Invalid 'context.store' section in config file: ${source}`);
+      }
+
+      if (
+        value.context.store.kind !== undefined &&
+        value.context.store.kind !== "file" &&
+        value.context.store.kind !== "memory"
+      ) {
+        throw new Error(`Invalid 'context.store.kind' in config file: ${source}`);
+      }
+
+      if (
+        value.context.store.filePath !== undefined &&
+        typeof value.context.store.filePath !== "string"
+      ) {
+        throw new Error(`Invalid 'context.store.filePath' in config file: ${source}`);
+      }
+    }
+
+    if (
+      value.context.rehydrateWorkflowArtifacts !== undefined &&
+      !isNonNegativeNumber(value.context.rehydrateWorkflowArtifacts)
+    ) {
+      throw new Error(`Invalid 'context.rehydrateWorkflowArtifacts' in config file: ${source}`);
+    }
+
+    if (
+      value.context.rehydrateSubagentArtifacts !== undefined &&
+      !isNonNegativeNumber(value.context.rehydrateSubagentArtifacts)
+    ) {
+      throw new Error(`Invalid 'context.rehydrateSubagentArtifacts' in config file: ${source}`);
+    }
+  }
+}
+
+function validateConfig(config: AgentWorkflowKitConfig): void {
+  if (!isPositiveNumber(config.version)) {
+    throw new Error("Invalid resolved config: 'version' must be a positive number");
+  }
+
+  if (config.orchestrator.mode !== "sequential") {
+    throw new Error("Invalid resolved config: unsupported orchestrator mode");
+  }
+
+  if (config.workflow.mode !== "sequential") {
+    throw new Error("Invalid resolved config: unsupported workflow mode");
+  }
+
+  if (
+    !Array.isArray(config.workflow.enabledAgents) ||
+    config.workflow.enabledAgents.length === 0 ||
+    config.workflow.enabledAgents.some((role) => !isAgentRole(role))
+  ) {
+    throw new Error("Invalid resolved config: 'workflow.enabledAgents' must include valid roles");
+  }
+
+  validateContextConfig(config);
+  validateAgentsConfig(config);
+}
+
+function validateContextConfig(config: AgentWorkflowKitConfig): void {
+  const { context } = config;
+
+  if (typeof context.enabled !== "boolean") {
+    throw new Error("Invalid resolved config: 'context.enabled' must be a boolean");
+  }
+
+  if (context.store.kind !== "file" && context.store.kind !== "memory") {
+    throw new Error("Invalid resolved config: unsupported context store kind");
+  }
+
+  if (context.store.filePath !== undefined && context.store.filePath.trim().length === 0) {
+    throw new Error("Invalid resolved config: 'context.store.filePath' cannot be empty");
+  }
+
+  if (!isNonNegativeNumber(context.rehydrateWorkflowArtifacts)) {
+    throw new Error("Invalid resolved config: 'context.rehydrateWorkflowArtifacts' must be >= 0");
+  }
+
+  if (!isNonNegativeNumber(context.rehydrateSubagentArtifacts)) {
+    throw new Error("Invalid resolved config: 'context.rehydrateSubagentArtifacts' must be >= 0");
+  }
+
+  if (!isPositiveNumber(context.retention.maxRuns)) {
+    throw new Error("Invalid resolved config: 'context.retention.maxRuns' must be > 0");
+  }
+
+  if (!isNonNegativeNumber(context.retention.maxDurableArtifactsPerRun)) {
+    throw new Error(
+      "Invalid resolved config: 'context.retention.maxDurableArtifactsPerRun' must be >= 0",
+    );
+  }
+
+  if (!isNonNegativeNumber(context.retention.maxEventsPerRun)) {
+    throw new Error("Invalid resolved config: 'context.retention.maxEventsPerRun' must be >= 0");
+  }
+
+  if (!isPositiveNumber(context.budget.maxWorkflowTaskChars)) {
+    throw new Error("Invalid resolved config: 'context.budget.maxWorkflowTaskChars' must be > 0");
+  }
+
+  if (!isPositiveNumber(context.budget.maxSubagentTaskChars)) {
+    throw new Error("Invalid resolved config: 'context.budget.maxSubagentTaskChars' must be > 0");
+  }
+
+  if (!isPositiveNumber(context.budget.maxRehydratedContextChars)) {
+    throw new Error(
+      "Invalid resolved config: 'context.budget.maxRehydratedContextChars' must be > 0",
+    );
+  }
+
+  if (!isPositiveNumber(context.budget.maxClarificationChars)) {
+    throw new Error("Invalid resolved config: 'context.budget.maxClarificationChars' must be > 0");
+  }
+
+  if (!isNonNegativeNumber(context.budget.maxEstimatedTrimmedTokensWarning)) {
+    throw new Error(
+      "Invalid resolved config: 'context.budget.maxEstimatedTrimmedTokensWarning' must be >= 0",
+    );
+  }
+
+  for (const [role, value] of Object.entries(context.budget.perRoleTaskCharLimit)) {
+    if (!isAgentRole(role) || !isPositiveNumber(value)) {
+      throw new Error(`Invalid resolved config: invalid per-role budget for '${role}'`);
+    }
+  }
+}
+
+function validateAgentsConfig(config: AgentWorkflowKitConfig): void {
+  for (const role of agentRoles) {
+    const settings = config.agents[role];
+
+    if (!settings) {
+      continue;
+    }
+
+    if (settings.enabled !== undefined && typeof settings.enabled !== "boolean") {
+      throw new Error(`Invalid resolved config: agents.${role}.enabled must be a boolean`);
+    }
+
+    if (settings.model !== undefined && typeof settings.model !== "string") {
+      throw new Error(`Invalid resolved config: agents.${role}.model must be a string`);
+    }
+
+    if (
+      settings.skills !== undefined &&
+      (!Array.isArray(settings.skills) || settings.skills.some((skill) => typeof skill !== "string"))
+    ) {
+      throw new Error(`Invalid resolved config: agents.${role}.skills must be a string array`);
+    }
+  }
+}
+
+function isPositiveNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function isNonNegativeNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isAgentRole(value: unknown): value is AgentRole {
+  return typeof value === "string" && agentRoles.includes(value as AgentRole);
 }
