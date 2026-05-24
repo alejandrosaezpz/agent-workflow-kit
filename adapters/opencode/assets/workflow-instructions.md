@@ -53,6 +53,56 @@ Validate the result and report what was checked and what remains unverified.
 - Prefer global configuration, with local project overrides when present.
 - Do not replace unrelated OpenCode configuration.
 
+## Delegation Runtime (Phase 3 skeleton)
+
+For full `/workflow` execution, the `workflow` agent is a coordinator.
+
+Execution model:
+
+1. delegate `explorer` via `task`
+2. delegate `planner` via `task`
+3. delegate `implementer` via `task`
+4. delegate `reviewer` via `task`
+5. delegate `tester` via `task`
+
+Rules:
+
+- keep phase progression visible in output
+- delegate phase execution to independent role agents, do not collapse all work inline
+- pass compact structured handoffs between phases
+- avoid raw transcript replay unless fallback is explicitly required
+
+Checkpoint rules:
+
+- after `explorer`: pause to allow user correction/clarification
+- after `planner`: ask approval before implementation
+- denied approval => safe cancellation with explicit reason
+
+Failure rules:
+
+- if a delegated phase fails, stop workflow
+- report failed phase, reason, and what remains unverified
+
+Traceability rules:
+
+- after each delegated phase, emit a compact delegation trace with:
+  - `from`
+  - `to`
+  - `input_summary`
+  - `output_summary`
+  - `budget_applied`
+
+Clarification guardrails:
+
+- `explorer` and `planner` may ask clarification questions
+- maximum clarification turns per phase: 2
+- if unresolved after 2 turns, continue with explicit assumptions
+- assumptions must be surfaced before downstream delegation
+
+Direct command rule:
+
+- when the intent is direct subagent execution (`/explorer`, `/planner`, etc.), delegate only that role via `task` and do not run full workflow.
+
 ## Phase-Handoff Guidance (Phase 14 baseline)
 
 When orchestrating the full workflow, prefer structured compact handoffs over transcript replay.
