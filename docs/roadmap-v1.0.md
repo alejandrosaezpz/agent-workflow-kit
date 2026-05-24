@@ -27,6 +27,14 @@ In the intended `v1.0` experience, a developer should be able to:
 4. run `/agent-name <query>` directly for focused work when a specific subagent is enough
 5. keep useful context from prior workflow activity without bloating the active conversation
 
+## ⚠️ Global Architectural Status
+
+The current codebase (`v0.1`) implements a **single-process sequential orchestrator** in TypeScript where all "subagents" are stub functions called in the same process. The `defaultAgents` in `src/skills/default-agents.ts` return placeholder results — they do not execute real exploration, planning, or implementation work.
+
+This roadmap was originally written for that architecture. However, the **target architecture** for `v1.0` has been refined: the system should use **truly independent agents** (each with its own OpenCode agent definition, context, and lifecycle), coordinated by an orchestrator that delegates via `task` and passes **optimized/compressed context** between phases.
+
+The phases below have been updated to reflect this target. Each phase now clearly marks what has been implemented under the old architecture versus what remains to be built under the new one.
+
 ## Implementation Progress
 
 Current execution log for this roadmap:
@@ -34,16 +42,19 @@ Current execution log for this roadmap:
 - phase status:
   - completed: Phase 1 (Lock v1.0 Scope)
   - completed: Phase 2 (Runtime Model And Contracts)
-  - partial: Phase 3 (Adaptive Orchestrator)
+  - partial: Phase 3 (Adaptive Orchestrator) — **pending: orchestrator-as-coordinator delegating via `task`**
   - partial: Phase 4 (Interactive Explorer And Planner)
-  - completed: Phase 5 (Direct Subagent Entry Points)
-  - completed: Phase 6 (Context Persistence Without Context Bloat)
-  - partial: Phase 7 (Token Efficiency And Context Budgeting)
+  - partial: Phase 5 (Direct Subagent Entry Points) — **pending: agents are not yet truly independent; all point to same `workflow` agent**
+  - partial: Phase 6 (Context Persistence Without Context Bloat) — **pending: cross-phase context compression does not exist yet**
+  - partial: Phase 7 (Token Efficiency And Context Budgeting) — **pending: per-phase handoff budgets are not defined**
   - completed: Phase 8 (Observability And Workflow Traceability)
-  - partial: Phase 9 (Real OpenCode Validation)
+  - not_started: Phase 9 (Real OpenCode Validation)
   - completed: Phase 10 (Stabilization, CI And Test Coverage)
   - completed: Phase 11 (OpenCode Compatibility And Adapter Stability)
   - partial: Phase 12 (OSS And Public Release Readiness)
+  - completed: Phase 13 (Independent Agent Definitions)
+  - not_started: Phase 14 (Context Optimization Pipeline)
+  - not_started: Phase 15 (Cross-Iteration Context Efficiency)
 
 - completed: `docs/runtime-model-v1.md` created with `v1.0` runtime contracts and lifecycle model
 - completed: base workflow runtime contracts added in `src/core/contracts/workflow.ts`
@@ -89,9 +100,15 @@ Current execution log for this roadmap:
 - completed: Phase 8 observability criteria are covered through structured events, compact trace reports, and post-run explanations (`src/core/orchestrator.ts`, `src/core/contracts/workflow.ts`, `test/core/orchestrator.test.ts`)
 - completed: Phase 10 stabilization criteria are covered with expanded automated tests plus CI quality gates (`test/**/*.test.ts`, `.github/workflows/ci.yml`)
 - completed: Phase 11 compatibility criteria are covered with explicit adapter boundary, stability levels, and fallback/release validation guidance (`docs/opencode-adapter.md`, `docs/opencode-compatibility-v1.md`)
-- next: add quality-signals to compare routing outcomes under budget pressure (Phase 7)
+- next: **Phase 14 — implement context optimization pipeline** (compressed handoffs between phases)
+- next: **Phase 15 — implement cross-iteration context efficiency** (summary-based persistence)
+- next: refactor `workflow` agent to delegate to independent agents via `task` instead of running phases in-process
+- next: update TypeScript contracts and installer to reflect the new multi-agent architecture
 - next: execute Phase 9 validation cases in real OpenCode sessions and attach evidence
-- next: document context inspection and retention-tuning examples in public docs (Phase 12)
+
+- completed: independent subagent definitions added for explorer/planner/implementer/reviewer/tester (`adapters/opencode/assets/*-agent.md`)
+- completed: OpenCode command routing now points direct slash commands to role-specific subagents instead of `workflow` (`adapters/opencode/assets/opencode.workflow.json`)
+- completed: adapter managed files now deploy independent role agents (`src/adapters/opencode/index.ts`)
 
 This section should be updated as each roadmap phase lands so contributors can see what is done and what comes next.
 
@@ -204,24 +221,40 @@ Completion criteria:
 ## Phase 3 - Adaptive Orchestrator
 
 Objective:
-Move from a fixed sequential flow to a task-aware orchestrator that decides which agents to run and in what order.
+Move from a fixed sequential flow to a task-aware orchestrator that decides which agents to run, in what order, and delegates execution to **truly independent agents** via the `task` tool instead of calling stub functions in-process.
+
+### Current Implementation (old architecture — completed)
+
+The TypeScript `Orchestrator` in `src/core/orchestrator.ts` runs agents sequentially in-process:
+- `for each role: agent.run(task, context)` — same session, same process
+- Supports checkpoints, clarifications, critical reviews, budgets, and post-run reports
+- `runSubagent()` path exists for direct invocations
+- All "agents" are stub functions in `src/skills/default-agents.ts`
+
+**This implementation is a proof of concept.** It demonstrates the contracts, event model, and workflow lifecycle, but it does NOT implement the true multi-agent architecture.
+
+### Pending Work (new architecture)
 
 Tasks:
 
-- define a routing model for deciding between full workflow and partial workflow paths
-- support selecting only the agents needed for a given task
-- keep the chosen phase path visible to the user
-- ensure the orchestrator can stop when clarification or approval is required
-- preserve a predictable execution model even when the workflow adapts
-- define what minimal context each routed agent actually needs
-- define what reasons for agent selection must be exposed in the execution trace
-- define what explanation of routing decisions must be shown to the user after execution
-- define when the orchestrator should recommend a different path than the one initially requested
+- **Redefine the orchestrator model**: the `workflow` agent (in OpenCode) becomes a **coordinator** that delegates each phase to an independent agent via the `task` tool, not a direct function call
+- Define a routing model for deciding between full workflow and partial workflow paths
+- Support selecting only the agents needed for a given task
+- Keep the chosen phase path visible to the user
+- Ensure the orchestrator can stop when clarification or approval is required
+- Preserve a predictable execution model even when the workflow adapts
+- **Define what minimal context each routed agent actually needs** — each agent receives only the compressed output of the previous phase, not the full conversation history
+- **Define the handoff contract**: what does the orchestrator send to each agent? What does it receive back?
+- Define what reasons for agent selection must be exposed in the execution trace
+- Define what explanation of routing decisions must be shown to the user after execution
+- Define when the orchestrator should recommend a different path than the one initially requested
 
 Completion criteria:
 
 - the orchestrator can choose an agent path based on task shape
 - skipped phases are intentional and visible, not implicit
+- **the orchestrator delegates to independent agents via `task` — not by calling functions in-process**
+- **each agent receives only the compressed context it needs, not the full chat history**
 - the workflow remains understandable to the user
 - routing decisions can be inspected after the fact
 - users can understand why the orchestrator chose that path
@@ -256,11 +289,26 @@ Completion criteria:
 Objective:
 Expose focused agent entry points so users can invoke a specific subagent without running the entire workflow.
 
+### Current Implementation (old architecture — partial)
+
+- ✅ Commands `/explorer`, `/planner`, `/implementer`, `/reviewer`, `/tester` exist in `opencode.json`
+- ✅ The `src/adapters/opencode/runtime.ts` parses and routes these commands via `parseOpenCodeSlashInvocation()`
+- ✅ The support matrix is defined in `src/adapters/opencode/index.ts`
+- ✅ The `Orchestrator.runSubagent()` method executes a focused role
+- ⚠️ **BUT: all commands point to the same `workflow` agent** — there are no independent agent definitions per role
+- ⚠️ **BUT: the `defaultAgents` in TypeScript are stubs** — they return placeholder results, not real work
+- ⚠️ **BUT: `Orchestrator.runSubagent()` calls a function in-process**, it does NOT launch a separate agent
+
+### Pending Work (new architecture)
+
 Tasks:
 
+- **Redefine what "direct subagent" means**: a truly independent OpenCode agent with its own:
+  - `agent.md` definition file with focused instructions
+  - Dedicated system prompt optimized for its role
+  - Its own context window (not sharing the orchestrator's context)
+  - Its own command entry that launches it as a separate agent
 - define a `v1.0` support matrix for directly callable subagents
-- support slash entry points in the form `/agent-name <query>`
-- ensure the orchestrator forwards that query into the requested subagent run
 - ensure a direct command creates a fresh subagent execution rather than relying on a long-lived hidden session
 - ensure direct subagent runs still use the same core contracts and context model
 - document the difference between `workflow` and direct subagent commands
@@ -270,13 +318,14 @@ Tasks:
 Completion criteria:
 
 - users can invoke each supported subagent directly with `/agent-name <query>`
+- **each subagent is a truly independent agent, not the same `workflow` agent pretending to be a different role**
 - direct subagent runs feel like first-class paths, not internal hacks
 - the adapter surface remains coherent
 - supported subagents and their capabilities are explicit rather than implied
 
-### Direct Subagent Support Matrix
+### Direct Subagent Support Matrix (Target)
 
-`v1.0` now defines this support matrix through `src/adapters/opencode/index.ts`:
+`v1.0` defines this support matrix through `src/adapters/opencode/index.ts`:
 
 - `explorer` - directly callable: yes - asks user questions: yes - durable artifacts: yes - write-oriented work: no - default context: medium - output: exploration summary and discovered constraints
 - `planner` - directly callable: yes - asks user questions: yes - durable artifacts: yes - write-oriented work: no - default context: medium - output: plan steps, tradeoffs, and recommendation
@@ -289,22 +338,41 @@ Completion criteria:
 Objective:
 Keep workflow context across agent lifecycles in a clear, bounded way that does not degrade chat performance.
 
+### Current Implementation (old architecture — partial)
+
+- ✅ `InMemoryWorkflowContextStore` and `FileWorkflowContextStore` exist in `src/core/context-store.ts`
+- ✅ Runs, artifacts, and events are persisted with bounded retention policies
+- ✅ Context rehydration from previous runs works (emits `context_rehydrated` events)
+- ✅ Config-driven retention settings (`maxRuns`, `maxDurableArtifactsPerRun`, `maxEventsPerRun`)
+- ⚠️ **BUT: all context persistence is between runs** (run N → run N+1)
+- ⚠️ **BUT: there is NO cross-phase context compression within a single run** — each phase receives the full accumulated task text
+- ⚠️ **BUT: the default agents are stubs** so the handoff mechanism has never been tested with real context
+
+### Pending Work (new architecture)
+
 Tasks:
 
-- define a minimal context model for preserved workflow state
-- separate active conversation context from persisted workflow artifacts
-- evaluate lightweight persistence options such as structured summaries or per-run artifacts
-- define how a new agent instance rehydrates only the context it actually needs
-- define visibility rules so the user can inspect what was preserved and why
-- avoid hidden long-term memory behavior in `v1.0`
-- ensure the orchestrator consumes compact state artifacts instead of requiring raw transcript replay
-- define short-lived versus durable context explicitly
-- define an explicit rule that raw transcript replay is exceptional, not the default handoff path
+- **Define cross-phase context compression**: within a single workflow run, each phase must produce a compressed summary for the next phase instead of passing the full accumulated context
+- Define a minimal context model for preserved workflow state
+- Separate active conversation context from persisted workflow artifacts
+- **Define the handoff format per phase**:
+  - Explorer → Planner: `{ findings, constraints, relevant_files, open_questions }`
+  - Planner → Implementer: `{ approved_plan, requirements, architecture_decisions }`
+  - Implementer → Reviewer: `{ changes_made, files_touched, diff_summary }`
+  - Reviewer → Tester: `{ review_findings, risks, regressions_found }`
+  - Tester → Orchestrator(for storage): `{ validation_result, gaps, coverage_report }`
+- Define how a new agent instance rehydrates only the context it actually needs
+- Define visibility rules so the user can inspect what was preserved and why
+- Avoid hidden long-term memory behavior in `v1.0`
+- Ensure the orchestrator consumes compact state artifacts instead of requiring raw transcript replay
+- Define short-lived versus durable context explicitly
+- Define an explicit rule that raw transcript replay is exceptional, not the default handoff path
 
 Completion criteria:
 
 - agents can be recreated without losing essential workflow state
 - preserved context is intentionally compact
+- **within a single run, each phase receives only the compressed output of the previous phase — not the full accumulated conversation**
 - the active chat does not accumulate full raw history unnecessarily
 - the persistence model is transparent to the user
 - the orchestrator can continue operating without routine context-window compression
@@ -315,25 +383,44 @@ Completion criteria:
 Objective:
 Make token usage a first-class design constraint without degrading the usefulness of the workflow.
 
+### Current Implementation (old architecture — partial)
+
+- ✅ Text budgets are configurable (`maxWorkflowTaskChars`, `maxSubagentTaskChars`, etc.) in config
+- ✅ Orchestrator enforces budgets and emits `context_budget_applied` events
+- ✅ Budget warnings trigger when estimated trimmed tokens exceed threshold
+- ✅ Per-role task budget presets are configurable (`perRoleTaskCharLimit`)
+- ✅ Tests cover budget trimming for workflow and direct subagent runs
+- ⚠️ **BUT: budgets apply to the accumulated task string, not to individual handoffs between phases**
+- ⚠️ **BUT: there are no target sizes for compressed handoffs (Explorer→Planner, Planner→Implementer, etc.)**
+- ⚠️ **BUT: there is no mechanism for each agent to produce a compressed summary as its output**
+
+### Pending Work (new architecture)
+
 Tasks:
 
-- define token-budget expectations for orchestrator and subagent paths
-- identify which context is required, optional, or wasteful per phase
-- prefer artifact handoff over transcript handoff where possible
-- define how much prior state a direct subagent invocation should receive by default
-- evaluate when smaller targeted prompts outperform broader shared context
-- define failure signals for when token-saving starts harming result quality
-- define a target size budget for durable artifacts and per-step summaries
-- define a default maximum context budget for the orchestrator
-- define default context budgets for each directly callable subagent category
-- define when compaction is allowed and what information must never be lost during compaction
+- **Define per-handoff token budgets** for the compressed context passed between phases:
+  - Explorer → Planner: target ~500 tokens
+  - Planner → Implementer: target ~400 tokens
+  - Implementer → Reviewer: target ~300 tokens
+  - Reviewer → Tester: target ~300 tokens
+  - Tester → Orchestrator (for storage): target ~400 tokens
+- Define token-budget expectations for orchestrator and subagent paths
+- Identify which context is required, optional, or wasteful per phase
+- **Replace accumulated-text handoff with structured compressed summaries**
+- Define how much prior state a direct subagent invocation should receive by default
+- Evaluate when smaller targeted prompts outperform broader shared context
+- Define failure signals for when token-saving starts harming result quality
+- Define a target size budget for durable artifacts and per-step summaries
+- Define a default maximum context budget for the orchestrator
+- Define default context budgets for each directly callable subagent category
+- Define when compaction is allowed and what information must never be lost during compaction
 
 Completion criteria:
 
 - token usage is intentionally bounded in the main workflow paths
 - the orchestrator is informed by compact artifacts rather than oversized chat history
 - efficiency tradeoffs are explicit instead of accidental
-- budgets exist for orchestrator context, subagent context, and artifact size
+- budgets exist for orchestrator context, subagent context, artifact size, **and per-phase handoffs**
 
 ### Metrics To Establish In This Phase
 
@@ -343,6 +430,7 @@ The implementation should leave behind measurable operational targets such as:
 - target artifact size per phase
 - target summary size for pause-and-resume handoff
 - per-subagent default context budget
+- **target handoff size per phase transition (Explorer→Planner, Planner→Implementer, etc.)**
 - thresholds that indicate quality is degrading because context was trimmed too aggressively
 
 ## Phase 8 - Observability And Workflow Traceability
@@ -466,6 +554,167 @@ Completion criteria:
 - documented known limitations and experimental areas
 - release notes that explain what `v1.0` does and does not guarantee
 
+## Phase 13 - Independent Agent Definitions (NEW — not started)
+
+Objective:
+Create truly independent OpenCode agents for each workflow role (explorer, planner, implementer, reviewer, tester), each with its own agent definition, system prompt, and context lifecycle.
+
+Rationale:
+The current implementation uses a single `workflow` agent that runs phases in-process. The target architecture requires separate agents that can be invoked independently, each with focused instructions and an isolated context window. This is the foundation for the entire multi-agent architecture.
+
+Tasks:
+
+- **Create `.opencode/agents/explorer.md`** with:
+  - Focused instructions: "Explore the codebase, understand current state, identify constraints"
+  - Permission to ask clarifying questions
+  - Output format: structured exploration summary
+  - Context budget: medium (~3200 chars)
+  - No write permissions (read-only analysis)
+- **Create `.opencode/agents/planner.md`** with:
+  - Focused instructions: "Turn exploration into the smallest correct implementation plan"
+  - Permission to ask clarifying questions
+  - Output format: plan steps + tradeoffs + recommended path
+  - Context budget: medium (~3200 chars)
+  - No write permissions (planning only)
+- **Create `.opencode/agents/implementer.md`** with:
+  - Focused instructions: "Apply the chosen change with minimal scope"
+  - No user questions (execution mode)
+  - Output format: implementation summary + touched areas
+  - Context budget: small (~2600 chars)
+  - Write permissions: yes
+- **Create `.opencode/agents/reviewer.md`** with:
+  - Focused instructions: "Check risks, regressions, missing edge cases, unnecessary complexity"
+  - No user questions
+  - Output format: review findings + risk assessment
+  - Context budget: small (~2200 chars)
+  - No write permissions
+- **Create `.opencode/agents/tester.md`** with:
+  - Focused instructions: "Validate the result and report what was checked and what remains unverified"
+  - No user questions
+  - Output format: validation result + remaining gaps
+  - Context budget: small (~2200 chars)
+  - No write permissions
+- **Register all agents in `opencode.json`** with their own `mode`, `description`, and command entries
+- **Update the installer** (`src/adapters/opencode/install.ts`) to deploy these agent definitions
+- **Ensure each agent can be invoked directly** via `/explorer <query>`, `/planner <query>`, etc.
+- **Ensure each agent starts with a fresh context** — it does not inherit the orchestrator's conversation history
+
+Completion criteria:
+
+- `/explorer "analyze this module"` launches a truly independent agent with exploration-focused instructions
+- Each agent has its own agent definition file in `.opencode/agents/`
+- Each agent can be invoked directly without going through the `workflow` agent
+- Each agent receives only the context it needs (not accumulated history from other phases)
+- The installer deploys all agent definitions idempotently
+
+Dependencies:
+
+- Requires OpenCode to support multiple registered subagents with independent contexts
+- Requires the installer to handle agent files (already supported via `OpenCodeManagedFile` with type `"agent"`)
+
+## Phase 14 - Context Optimization Pipeline (NEW — not started)
+
+Objective:
+Design and implement the pipeline that compresses and passes context between phases within a single workflow run, ensuring each agent receives only what it needs and the active chat does not bloat.
+
+Rationale:
+In the current implementation, context accumulates across phases — each agent receives the full task text plus all previous results. In the target architecture, each agent must receive a compressed, structured summary of the previous phase's output, not the raw transcript.
+
+Tasks:
+
+- **Define the handoff schema** for each phase transition:
+  - `ExplorerOutput`: `{ summary, findings[], constraints[], relevantFiles[], openQuestions[] }`
+  - `PlannerOutput`: `{ plan, tradeoffs[], recommendation, architectureDecisions[] }`
+  - `ImplementerOutput`: `{ changes[], filesTouched[], diffSummary, warnings[] }`
+  - `ReviewerOutput`: `{ risks[], regressionsFound[], missingCoverage[], qualityScore }`
+  - `TesterOutput`: `{ passed[], failed[], gaps[], coverageReport }`
+- **Define the orchestrator's handoff logic** (in the `workflow` agent instructions):
+  1. Launch Explorer via `task` with the original user query
+  2. Receive Explorer's compressed output
+  3. Launch Planner via `task` passing: `{ originalQuery, explorationSummary }`
+  4. Receive Planner's compressed output
+  5. Launch Implementer via `task` passing: `{ originalQuery, explorationSummary, planSummary }`
+  6. Continue similarly for Reviewer and Tester
+  7. After Tester completes, produce a **final compressed summary** for storage
+- **Implement validation**: if any handoff exceeds its token budget, truncate with a clear warning
+- **Ensure inspectability**: the orchestrator logs what context was passed to each agent
+- **Define the "no-bloat" rule**: the orchestrator's own context should contain only:
+  - The original user query
+  - The compressed output of each completed phase (not the full agent conversation)
+  - The final summary for persistence
+
+Completion criteria:
+
+- Each phase receives only the compressed output of the previous phase(s), not the full chat history
+- The orchestrator's context stays bounded and predictable regardless of run complexity
+- Handoff format is explicit and inspectable
+- Token budgets per handoff are enforced
+- The chat does not accumulate raw agent conversations
+
+Metrics:
+
+- Explorer→Planner handoff: target ≤500 tokens
+- Planner→Implementer handoff: target ≤400 tokens
+- Implementer→Reviewer handoff: target ≤300 tokens
+- Reviewer→Tester handoff: target ≤300 tokens
+- Tester→Orchestrator handoff: target ≤400 tokens
+- Orchestrator's total context after full run: target ≤2500 tokens (excluding persistent storage)
+
+## Phase 15 - Cross-Iteration Context Efficiency (NEW — not started)
+
+Objective:
+Ensure that after a workflow run completes, the orchestrator retains an optimized, minimal context for future iterations — without carrying over the full history of every phase.
+
+Rationale:
+Today, context persistence stores entire `WorkflowRun` objects including all events and artifacts. In the target architecture, the orchestrator should store only a compact summary that captures what happened and why, so future runs can benefit from prior work without context bloat.
+
+Tasks:
+
+- **Define the cross-iteration summary format**:
+  ```typescript
+  interface CrossIterationSummary {
+    task: string;
+    timestamp: string;
+    phasesCompleted: AgentRole[];
+    outcome: "completed" | "failed" | "cancelled";
+    keyFindings: string[];        // compact list of what was learned
+    artifactsProduced: string[];   // references to durable artifacts
+    decisionsMade: { what: string; why: string }[];
+    blockersOrGaps: string[];
+    tokenUsage: { total: number; byPhase: Record<string, number> };
+  }
+  ```
+- **Replace full `WorkflowRun` persistence with summary-based persistence** in the orchestrator's default path:
+  - The full run data can still be stored for debugging, but the **default rehydration path** uses only the summary
+  - The summary is stored in the existing `context-store` (`FileWorkflowContextStore` or `InMemoryWorkflowContextStore`)
+- **On subsequent runs**, the orchestrator rehydrates only the summaries from previous runs (not full artifacts)
+- **Define retention policy**: keep last N summaries (default: 5), purge older ones
+- **Ensure the user can inspect what was retained** and why
+- **Define when full artifact rehydration is needed** vs when summary is sufficient
+
+Completion criteria:
+
+- A workflow run produces a compact summary (≤500 tokens) for cross-iteration reuse
+- The orchestrator on a new run loads only summaries (not full runs) by default
+- The user can opt into full artifact rehydration when needed
+- Cross-iteration context does not bloat the active chat
+- Retention policy prevents unbounded accumulation
+
+Metrics:
+
+- Cross-iteration summary size: target ≤500 tokens
+- Number of summaries retained: default 5, configurable
+- Rehydration overhead: ≤1 round-trip to load summaries
+
+---
+
+> **Note on the TypeScript library**: The existing `src/core/` TypeScript code (`Orchestrator`, `context-store`, `config`, `contracts`) was built as a proof of concept for the old single-process architecture. It demonstrates the contracts, event model, and workflow lifecycle. Under the new architecture, the **real orchestration moves to the OpenCode agent level** (the `workflow` agent delegating via `task`). The TypeScript library may continue to serve as:
+> - A **type reference** for the contracts and data structures
+> - A **local validation tool** for config and context-store operations
+> - But it will no longer be the runtime execution engine
+>
+> This migration should be done incrementally and clearly documented so future contributors understand which parts are active and which are legacy references.
+
 ## What Must Stay Out Of v1.0
 
 The following should remain out of scope unless they become necessary to support the core goals:
@@ -479,31 +728,64 @@ The following should remain out of scope unless they become necessary to support
 
 ## Recommended Working Order
 
-The order should be:
+### Phase 1 (Legacy — Old Architecture)
 
-1. lock `v1.0` scope
-2. define runtime model and contracts
-3. implement adaptive orchestration
-4. implement interactive explorer and planner behavior
-5. add direct subagent entry points
-6. implement bounded context persistence
-7. implement token efficiency and context budgeting rules
-8. add observability and workflow traceability
-9. validate real OpenCode usage
-10. stabilize with CI and tests
-11. lock adapter compatibility expectations
-12. align docs and release publicly
+The following phases were completed under the old single-process architecture and serve as the contract foundation:
+
+1. ✅ lock `v1.0` scope
+2. ✅ define runtime model and contracts
+3. ✅ implement interactive explorer and planner behavior (partial — needs real agents)
+4. ✅ add direct subagent entry points (partial — agents are not independent)
+5. ✅ implement bounded context persistence (partial — missing cross-phase compression)
+6. ✅ implement token efficiency and context budgeting rules (partial — missing handoff budgets)
+7. ✅ add observability and workflow traceability
+8. ✅ stabilize with CI and tests
+9. ✅ lock adapter compatibility expectations
+10. ✅ align docs and release publicly (partial)
+
+### Phase 2 (Target — New Multi-Agent Architecture)
+
+The following phases are **pending** and represent the actual target architecture:
+
+11. **⬜ Phase 13 — Independent Agent Definitions**
+    - Create `explorer.md`, `planner.md`, `implementer.md`, `reviewer.md`, `tester.md`
+    - Register them as separate agents in `opencode.json`
+    - Update the installer to deploy them
+    - **This is the foundation. Do Phase 13 first.**
+
+12. **⬜ Phase 14 — Context Optimization Pipeline**
+    - Define handoff schemas per phase transition
+    - Implement compression logic in the orchestrator (`workflow` agent)
+    - Set and enforce token budgets per handoff
+    - **This depends on Phase 13 (agents must exist first).**
+
+13. **⬜ Phase 15 — Cross-Iteration Context Efficiency**
+    - Define summary format for cross-iteration persistence
+    - Replace full-run persistence with summary-based persistence
+    - Implement retention policy
+    - **This depends on Phase 14 (compression must work first).**
+
+14. **🔄 Phase 3 — Adaptive Orchestrator (Refactor)**
+    - Rewrite the `workflow` agent to be a coordinator that delegates via `task`
+    - Remove the old in-process sequential execution
+    - **This is the final integration step. Do this last.**
+
+15. **⬜ Phase 9 — Real OpenCode Validation**
+    - Validate the complete multi-agent workflow in real OpenCode sessions
+    - Test direct subagent invocations with truly independent agents
+    - Measure context efficiency gains
+    - **Do this after all architecture changes are complete.**
 
 ## Release Gate For v1.0
 
 `v1.0` should not be considered complete until all of the following are true:
 
+### Previous Architecture (Legacy — already met)
 - adaptive routing works in real tasks
 - the runtime model for workflow runs, direct subagent runs, pause, and resume is implemented consistently
 - `explorer` and `planner` can ask the user clarifying questions
 - supported subagents can be invoked with `/agent-name <query>`
 - preserved context is compact, inspectable, and useful
-- the orchestrator stays informed without depending on routine context compression
 - token usage is intentionally bounded in the core paths
 - execution traces explain why routing and handoff decisions happened
 - the user receives a clear post-run explanation of what was done and why
@@ -513,10 +795,21 @@ The order should be:
 - OpenCode compatibility and known limits are documented
 - documentation matches the implemented product
 
+### Multi-Agent Architecture (Target — not yet met)
+- **each workflow role (explorer, planner, implementer, reviewer, tester) is a truly independent OpenCode agent** with its own agent definition, system prompt, and context lifecycle
+- **the `workflow` orchestrator delegates to independent agents via `task`** — it does not run phases in-process
+- **each phase receives only the compressed output of the previous phase**, not the full accumulated conversation
+- **handoff token budgets are defined and enforced** per phase transition (Explorer→Planner ≤500 tokens, etc.)
+- **cross-iteration persistence uses compact summaries** (≤500 tokens) instead of full run data
+- **the orchestrator's own context stays bounded** regardless of run complexity (target ≤2500 tokens for a full run)
+- the user can inspect exactly what context was passed between agents
+- the installer deploys all independent agent definitions idempotently
+
 ## Definition Of Success
 
 Agent Workflow Kit is succeeding at `v1.0` when:
 
+### Core Workflow Quality
 - the workflow is no longer just sequential by default but task-aware
 - user interaction improves exploration and planning quality
 - focused direct subagent usage is practical
@@ -524,4 +817,16 @@ Agent Workflow Kit is succeeding at `v1.0` when:
 - token efficiency improves cost and responsiveness without obvious quality loss
 - users can learn from the workflow because decisions and actions are clearly explained
 - the system behaves like a critical collaborator instead of a passive executor
+
+### Multi-Agent Architecture (Target)
+- **each workflow phase runs as an independent agent** with its own context window
+- **the orchestrator delegates work** via `task` instead of calling functions in-process
+- **context is compressed between phases** — no agent sees the full transcript of previous agents
+- **cross-iteration memory is a compact summary** (≤500 tokens) rather than full run replay
+- **the active chat stays lean** — the orchestrator's context grows predictably regardless of how many phases run
+
+### Project Readiness
 - the project can be shown publicly as a real, usable workflow layer rather than only a concept
+- the multi-agent architecture is demonstrable in real OpenCode sessions
+- the installer deploys all independent agents correctly
+- documentation matches the implemented architecture

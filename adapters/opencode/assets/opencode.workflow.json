@@ -4,6 +4,26 @@
     "workflow": {
       "mode": "primary",
       "description": "Primary workflow agent for structured phased execution"
+    },
+    "explorer": {
+      "mode": "subagent",
+      "description": "Explore the codebase and summarize current state, constraints, and risks"
+    },
+    "planner": {
+      "mode": "subagent",
+      "description": "Turn exploration findings into a small, actionable implementation plan"
+    },
+    "implementer": {
+      "mode": "subagent",
+      "description": "Apply approved changes with minimal scope"
+    },
+    "reviewer": {
+      "mode": "subagent",
+      "description": "Review changes for risks, regressions, and complexity"
+    },
+    "tester": {
+      "mode": "subagent",
+      "description": "Validate results and report executed checks and remaining gaps"
     }
   },
   "command": {
@@ -14,28 +34,28 @@
     },
     "explorer": {
       "description": "Run explorer subagent directly for a focused query",
-      "agent": "workflow",
-      "template": "Run direct subagent `explorer` for this request:\n$ARGUMENTS"
+      "agent": "explorer",
+      "template": "$ARGUMENTS"
     },
     "planner": {
       "description": "Run planner subagent directly for a focused query",
-      "agent": "workflow",
-      "template": "Run direct subagent `planner` for this request:\n$ARGUMENTS"
+      "agent": "planner",
+      "template": "$ARGUMENTS"
     },
     "implementer": {
       "description": "Run implementer subagent directly for a focused query",
-      "agent": "workflow",
-      "template": "Run direct subagent `implementer` for this request:\n$ARGUMENTS"
+      "agent": "implementer",
+      "template": "$ARGUMENTS"
     },
     "reviewer": {
       "description": "Run reviewer subagent directly for a focused query",
-      "agent": "workflow",
-      "template": "Run direct subagent `reviewer` for this request:\n$ARGUMENTS"
+      "agent": "reviewer",
+      "template": "$ARGUMENTS"
     },
     "tester": {
       "description": "Run tester subagent directly for a focused query",
-      "agent": "workflow",
-      "template": "Run direct subagent `tester` for this request:\n$ARGUMENTS"
+      "agent": "tester",
+      "template": "$ARGUMENTS"
     }
   }
 }

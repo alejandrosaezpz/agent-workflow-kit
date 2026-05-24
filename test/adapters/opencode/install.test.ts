@@ -40,15 +40,39 @@ test("installOpenCodeAdapter installs assets and merges project config", () => {
       "agent-workflow-kit",
       "workflow-instructions.md",
     );
+    const workflowAgentPath = join(cwd, ".opencode", "agents", "workflow.md");
+    const explorerAgentPath = join(cwd, ".opencode", "agents", "explorer.md");
+    const plannerAgentPath = join(cwd, ".opencode", "agents", "planner.md");
+    const implementerAgentPath = join(cwd, ".opencode", "agents", "implementer.md");
+    const reviewerAgentPath = join(cwd, ".opencode", "agents", "reviewer.md");
+    const testerAgentPath = join(cwd, ".opencode", "agents", "tester.md");
 
     assert.equal(result.scope, "project");
     assert.equal(result.configPath, join(cwd, "opencode.json"));
     assert.ok(existsSync(instructionsPath));
+    assert.ok(existsSync(workflowAgentPath));
+    assert.ok(existsSync(explorerAgentPath));
+    assert.ok(existsSync(plannerAgentPath));
+    assert.ok(existsSync(implementerAgentPath));
+    assert.ok(existsSync(reviewerAgentPath));
+    assert.ok(existsSync(testerAgentPath));
 
     const merged = readJson(result.configPath);
     assert.deepEqual(merged.custom, { keep: true });
     assert.ok((merged.agent as { workflow?: unknown }).workflow);
+    assert.ok((merged.agent as { explorer?: unknown }).explorer);
+    assert.ok((merged.agent as { planner?: unknown }).planner);
+    assert.ok((merged.agent as { implementer?: unknown }).implementer);
+    assert.ok((merged.agent as { reviewer?: unknown }).reviewer);
+    assert.ok((merged.agent as { tester?: unknown }).tester);
     assert.ok((merged.command as { workflow?: unknown }).workflow);
+
+    const command = merged.command as Record<string, { agent?: string }>;
+    assert.equal(command.explorer?.agent, "explorer");
+    assert.equal(command.planner?.agent, "planner");
+    assert.equal(command.implementer?.agent, "implementer");
+    assert.equal(command.reviewer?.agent, "reviewer");
+    assert.equal(command.tester?.agent, "tester");
 
     const instructions = merged.instructions as unknown[];
     assert.ok(Array.isArray(instructions));

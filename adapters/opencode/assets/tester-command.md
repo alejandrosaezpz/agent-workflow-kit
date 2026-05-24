@@ -1,6 +1,5 @@
 ---
 description: Run tester subagent directly for focused validation
-agent: workflow
+agent: tester
 ---
-Run direct subagent `tester` for this request:
 $ARGUMENTS
