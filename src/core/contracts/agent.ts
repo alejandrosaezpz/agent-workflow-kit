@@ -26,6 +26,7 @@ export interface ContextStoreSettings {
 
 export interface ContextRetentionSettings {
   maxRuns: number;
+  maxSummaries: number;
   maxDurableArtifactsPerRun: number;
   maxEventsPerRun: number;
 }
@@ -48,6 +49,7 @@ export interface ContextBudgetSettings {
 
 export interface ContextSettings {
   enabled: boolean;
+  rehydrationMode: "summary" | "artifact";
   store: ContextStoreSettings;
   rehydrateWorkflowArtifacts: number;
   rehydrateSubagentArtifacts: number;

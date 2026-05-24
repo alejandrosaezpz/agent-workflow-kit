@@ -54,7 +54,7 @@ Current execution log for this roadmap:
   - partial: Phase 12 (OSS And Public Release Readiness)
   - completed: Phase 13 (Independent Agent Definitions)
   - completed: Phase 14 (Context Optimization Pipeline)
-  - not_started: Phase 15 (Cross-Iteration Context Efficiency)
+  - completed: Phase 15 (Cross-Iteration Context Efficiency)
 
 - completed: `docs/runtime-model-v1.md` created with `v1.0` runtime contracts and lifecycle model
 - completed: base workflow runtime contracts added in `src/core/contracts/workflow.ts`
@@ -101,7 +101,6 @@ Current execution log for this roadmap:
 - completed: Phase 10 stabilization criteria are covered with expanded automated tests plus CI quality gates (`test/**/*.test.ts`, `.github/workflows/ci.yml`)
 - completed: Phase 11 compatibility criteria are covered with explicit adapter boundary, stability levels, and fallback/release validation guidance (`docs/opencode-adapter.md`, `docs/opencode-compatibility-v1.md`)
 - next: **Phase 14 — implement context optimization pipeline** (compressed handoffs between phases)
-- next: **Phase 15 — implement cross-iteration context efficiency** (summary-based persistence)
 - next: refactor `workflow` agent to delegate to independent agents via `task` instead of running phases in-process
 - next: update TypeScript contracts and installer to reflect the new multi-agent architecture
 - next: execute Phase 9 validation cases in real OpenCode sessions and attach evidence
@@ -112,6 +111,8 @@ Current execution log for this roadmap:
 - completed: phase-handoff schemas and target budgets documented for workflow coordination (`adapters/opencode/assets/workflow-agent.md`, `adapters/opencode/assets/workflow-instructions.md`, `docs/runtime-model-v1.md`, `src/core/contracts/workflow.ts`)
 - completed: runtime now creates structured per-phase handoff artifacts, enforces configurable handoff budgets, and emits handoff trace events (`src/core/orchestrator.ts`, `src/core/config.ts`, `src/core/contracts/agent.ts`, `src/core/contracts/workflow.ts`)
 - completed: tests now cover handoff transitions, handoff budget trimming, degraded handoff shape fallback, and config validation (`test/core/orchestrator.test.ts`, `test/core/config.test.ts`)
+- completed: cross-iteration summaries are now persisted and used as default rehydration path with configurable summary retention (`src/core/context-store.ts`, `src/core/orchestrator.ts`, `src/core/config.ts`)
+- completed: context rehydration mode now supports explicit summary-first vs artifact mode (`src/core/contracts/agent.ts`, `src/core/config.ts`, `src/core/orchestrator.ts`)
 
 This section should be updated as each roadmap phase lands so contributors can see what is done and what comes next.
 
@@ -663,7 +664,7 @@ Metrics:
 - Tester→Orchestrator handoff: target ≤400 tokens
 - Orchestrator's total context after full run: target ≤2500 tokens (excluding persistent storage)
 
-## Phase 15 - Cross-Iteration Context Efficiency (NEW — not started)
+## Phase 15 - Cross-Iteration Context Efficiency (NEW — completed)
 
 Objective:
 Ensure that after a workflow run completes, the orchestrator retains an optimized, minimal context for future iterations — without carrying over the full history of every phase.

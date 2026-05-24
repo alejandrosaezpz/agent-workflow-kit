@@ -188,6 +188,95 @@ test("runWorkflow rehydrates context from persisted durable artifacts", async ()
   assert.ok(eventTypes.includes("context_rehydrated"));
 });
 
+test("runWorkflow prefers summary-based context rehydration", async () => {
+  const orchestrator = new Orchestrator(defaultAgents);
+  const contextStore = new InMemoryWorkflowContextStore();
+
+  await orchestrator.runWorkflow(
+    "initial run for summaries",
+    "/tmp/workspace",
+    makeResolvedConfig(),
+    {
+      interaction: {
+        async requestApproval() {
+          return true;
+        },
+      },
+      context: {
+        store: contextStore,
+      },
+    },
+  );
+
+  const result = await orchestrator.runWorkflow(
+    "follow-up run",
+    "/tmp/workspace",
+    makeResolvedConfig(),
+    {
+      interaction: {
+        async requestApproval() {
+          return true;
+        },
+      },
+      context: {
+        store: contextStore,
+      },
+    },
+  );
+
+  const summaryRehydrateEvent = result.workflowRun.events.find(
+    (event) =>
+      event.type === "context_rehydrated" &&
+      event.reason === "loaded cross-iteration summaries from prior runs",
+  );
+
+  assert.ok(Boolean(summaryRehydrateEvent));
+});
+
+test("runWorkflow can force artifact-based rehydration mode", async () => {
+  const orchestrator = new Orchestrator(defaultAgents);
+  const contextStore = new InMemoryWorkflowContextStore();
+
+  await orchestrator.runSubagent(
+    "explorer",
+    "seed artifact context",
+    "/tmp/workspace",
+    makeResolvedConfig(),
+    {
+      context: {
+        store: contextStore,
+      },
+    },
+  );
+
+  const config = makeResolvedConfig();
+  config.config.context.rehydrationMode = "artifact";
+
+  const result = await orchestrator.runWorkflow(
+    "follow-up using artifact mode",
+    "/tmp/workspace",
+    config,
+    {
+      interaction: {
+        async requestApproval() {
+          return true;
+        },
+      },
+      context: {
+        store: contextStore,
+      },
+    },
+  );
+
+  const artifactRehydrateEvent = result.workflowRun.events.find(
+    (event) =>
+      event.type === "context_rehydrated" &&
+      event.reason === "loaded durable artifacts from prior runs",
+  );
+
+  assert.ok(Boolean(artifactRehydrateEvent));
+});
+
 test("runWorkflow applies text budgets and emits budget events", async () => {
   const orchestrator = new Orchestrator(defaultAgents);
   const result = await orchestrator.runWorkflow(

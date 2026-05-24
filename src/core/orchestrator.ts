@@ -145,6 +145,7 @@ export class Orchestrator {
     ];
     const contextStore = options.context?.store;
     const maxHydratedArtifacts = options.context?.maxHydratedArtifacts ?? 3;
+    const maxHydratedSummaries = resolvedConfig.config.context.retention.maxSummaries;
     const budget = resolvedConfig.config.context.budget;
     const budgetWarningState: BudgetWarningState = {
       raised: false,
@@ -161,27 +162,35 @@ export class Orchestrator {
     });
 
     if (contextStore) {
-      const hydratedArtifacts = await contextStore.loadRecentArtifacts({
-        cwd,
-        task,
-        maxArtifacts: maxHydratedArtifacts,
-      });
+      const preferSummaryRehydration =
+        resolvedConfig.config.context.rehydrationMode === "summary";
 
-      if (hydratedArtifacts.length > 0) {
+      const hydratedSummaries = preferSummaryRehydration
+        ? await contextStore.loadRecentSummaries({
+            cwd,
+            task,
+            maxSummaries: maxHydratedSummaries,
+          })
+        : [];
+
+      if (preferSummaryRehydration && hydratedSummaries.length > 0) {
         this.pushEvent(events, {
           runId,
           type: "context_rehydrated",
-          reason: "loaded durable artifacts from prior runs",
+          reason: "loaded cross-iteration summaries from prior runs",
           contextRef: {
-            artifactIds: hydratedArtifacts.map((artifact) => artifact.id),
+            artifactIds: hydratedSummaries.map((summary) => summary.runId),
           },
           payload: {
-            artifactCount: hydratedArtifacts.length,
+            summaryCount: hydratedSummaries.length,
           },
         });
 
-        const rehydratedSummaries = hydratedArtifacts
-          .map((artifact) => `- [${artifact.producerRole}] ${artifact.summary}`)
+        const rehydratedSummaries = hydratedSummaries
+          .map(
+            (summary) =>
+              `- [${summary.outcome}] ${summary.task} :: findings=${summary.keyFindings.join(" | ")}`,
+          )
           .join("\n");
 
         const boundedSummaries = this.applyTextBudget({
@@ -202,6 +211,49 @@ export class Orchestrator {
           value: effectiveTask,
           warningState: budgetWarningState,
         });
+      } else {
+        const hydratedArtifacts = await contextStore.loadRecentArtifacts({
+          cwd,
+          task,
+          maxArtifacts: maxHydratedArtifacts,
+        });
+
+        if (hydratedArtifacts.length > 0) {
+          this.pushEvent(events, {
+            runId,
+            type: "context_rehydrated",
+            reason: "loaded durable artifacts from prior runs",
+            contextRef: {
+              artifactIds: hydratedArtifacts.map((artifact) => artifact.id),
+            },
+            payload: {
+              artifactCount: hydratedArtifacts.length,
+            },
+          });
+
+          const rehydratedSummaries = hydratedArtifacts
+            .map((artifact) => `- [${artifact.producerRole}] ${artifact.summary}`)
+            .join("\n");
+
+          const boundedSummaries = this.applyTextBudget({
+            runId,
+            events,
+            field: "rehydrated_context",
+            maxChars: budget.maxRehydratedContextChars,
+            value: rehydratedSummaries,
+            warningState: budgetWarningState,
+          });
+
+          effectiveTask = `${effectiveTask}\n\nRelevant prior context:\n${boundedSummaries}`;
+          effectiveTask = this.applyTextBudget({
+            runId,
+            events,
+            field: "workflow_task",
+            maxChars: budget.maxWorkflowTaskChars,
+            value: effectiveTask,
+            warningState: budgetWarningState,
+          });
+        }
       }
     }
 
@@ -756,6 +808,7 @@ export class Orchestrator {
     const events: WorkflowEvent[] = [];
     const contextStore = options.context?.store;
     const maxHydratedArtifacts = options.context?.maxHydratedArtifacts ?? 2;
+    const maxHydratedSummaries = resolvedConfig.config.context.retention.maxSummaries;
     const budget = resolvedConfig.config.context.budget;
     const budgetWarningState: BudgetWarningState = {
       raised: false,
@@ -771,27 +824,35 @@ export class Orchestrator {
     });
 
     if (contextStore) {
-      const hydratedArtifacts = await contextStore.loadRecentArtifacts({
-        cwd,
-        task,
-        maxArtifacts: maxHydratedArtifacts,
-      });
+      const preferSummaryRehydration =
+        resolvedConfig.config.context.rehydrationMode === "summary";
 
-      if (hydratedArtifacts.length > 0) {
+      const hydratedSummaries = preferSummaryRehydration
+        ? await contextStore.loadRecentSummaries({
+            cwd,
+            task,
+            maxSummaries: maxHydratedSummaries,
+          })
+        : [];
+
+      if (preferSummaryRehydration && hydratedSummaries.length > 0) {
         this.pushEvent(events, {
           runId,
           type: "context_rehydrated",
-          reason: "loaded durable artifacts for direct subagent run",
+          reason: "loaded cross-iteration summaries for direct subagent run",
           contextRef: {
-            artifactIds: hydratedArtifacts.map((artifact) => artifact.id),
+            artifactIds: hydratedSummaries.map((summary) => summary.runId),
           },
           payload: {
-            artifactCount: hydratedArtifacts.length,
+            summaryCount: hydratedSummaries.length,
           },
         });
 
-        const rehydratedSummaries = hydratedArtifacts
-          .map((artifact) => `- [${artifact.producerRole}] ${artifact.summary}`)
+        const rehydratedSummaries = hydratedSummaries
+          .map(
+            (summary) =>
+              `- [${summary.outcome}] ${summary.task} :: findings=${summary.keyFindings.join(" | ")}`,
+          )
           .join("\n");
 
         const boundedSummaries = this.applyTextBudget({
@@ -812,6 +873,49 @@ export class Orchestrator {
           value: effectiveTask,
           warningState: budgetWarningState,
         });
+      } else {
+        const hydratedArtifacts = await contextStore.loadRecentArtifacts({
+          cwd,
+          task,
+          maxArtifacts: maxHydratedArtifacts,
+        });
+
+        if (hydratedArtifacts.length > 0) {
+          this.pushEvent(events, {
+            runId,
+            type: "context_rehydrated",
+            reason: "loaded durable artifacts for direct subagent run",
+            contextRef: {
+              artifactIds: hydratedArtifacts.map((artifact) => artifact.id),
+            },
+            payload: {
+              artifactCount: hydratedArtifacts.length,
+            },
+          });
+
+          const rehydratedSummaries = hydratedArtifacts
+            .map((artifact) => `- [${artifact.producerRole}] ${artifact.summary}`)
+            .join("\n");
+
+          const boundedSummaries = this.applyTextBudget({
+            runId,
+            events,
+            field: "rehydrated_context",
+            maxChars: budget.maxRehydratedContextChars,
+            value: rehydratedSummaries,
+            warningState: budgetWarningState,
+          });
+
+          effectiveTask = `${effectiveTask}\n\nRelevant prior context:\n${boundedSummaries}`;
+          effectiveTask = this.applyTextBudget({
+            runId,
+            events,
+            field: "subagent_task",
+            maxChars: budget.maxSubagentTaskChars,
+            value: effectiveTask,
+            warningState: budgetWarningState,
+          });
+        }
       }
     }
 

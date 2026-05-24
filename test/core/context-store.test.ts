@@ -70,6 +70,28 @@ test("InMemoryWorkflowContextStore prunes old runs by policy", () => {
   assert.ok(artifacts.every((artifact) => artifact.id.startsWith("run-2")));
 });
 
+test("InMemoryWorkflowContextStore returns bounded recent summaries", () => {
+  const store = new InMemoryWorkflowContextStore({
+    maxRuns: 10,
+    maxSummaries: 2,
+    maxDurableArtifactsPerRun: 2,
+  });
+
+  store.saveRun(makeRun("run-1", "/tmp/workspace", 1));
+  store.saveRun(makeRun("run-2", "/tmp/workspace", 1));
+  store.saveRun(makeRun("run-3", "/tmp/workspace", 1));
+
+  const summaries = store.loadRecentSummaries({
+    cwd: "/tmp/workspace",
+    task: "follow-up",
+    maxSummaries: 2,
+  });
+
+  assert.equal(summaries.length, 2);
+  assert.equal(summaries[0]?.runId, "run-3");
+  assert.equal(summaries[1]?.runId, "run-2");
+});
+
 function withTempDir(run: (cwd: string) => void): void {
   const cwd = mkdtempSync(join(tmpdir(), "awk-context-store-test-"));
 
@@ -100,9 +122,17 @@ test("FileWorkflowContextStore persists and rehydrates artifacts", () => {
       maxArtifacts: 3,
     });
 
+    const summaries = store.loadRecentSummaries({
+      cwd,
+      task: "follow-up",
+      maxSummaries: 2,
+    });
+
     assert.equal(artifacts.length, 3);
     assert.ok(artifacts[0]?.id.startsWith("run-2"));
     assert.equal(artifacts.every((artifact) => artifact.data === undefined), true);
+    assert.equal(summaries.length, 2);
+    assert.equal(summaries[0]?.runId, "run-2");
   });
 });
 

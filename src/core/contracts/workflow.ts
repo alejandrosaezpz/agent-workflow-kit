@@ -97,6 +97,22 @@ export interface PhaseHandoffBudgetTargets {
   testerToStorage: number;
 }
 
+export interface CrossIterationSummary {
+  runId: string;
+  task: string;
+  timestamp: string;
+  phasesCompleted: AgentRole[];
+  outcome: "completed" | "failed" | "cancelled";
+  keyFindings: string[];
+  artifactsProduced: string[];
+  decisionsMade: Array<{ what: string; why: string }>;
+  blockersOrGaps: string[];
+  tokenUsage: {
+    estimatedFinalTaskTokens: number;
+    estimatedTrimmedTokens: number;
+  };
+}
+
 export interface WorkflowEvent<TPayload = Record<string, unknown>> {
   id: string;
   runId: string;

@@ -86,3 +86,43 @@ test("resolveConfig rejects invalid phase handoff budget values", () => {
     );
   });
 });
+
+test("resolveConfig rejects invalid maxSummaries retention value", () => {
+  withTempDir((cwd) => {
+    writeFileSync(
+      join(cwd, ".agent-workflow-kit.json"),
+      JSON.stringify({
+        context: {
+          retention: {
+            maxSummaries: 0,
+          },
+        },
+      }),
+      "utf8",
+    );
+
+    assert.throws(
+      () => resolveConfig(cwd),
+      /Invalid resolved config: 'context.retention.maxSummaries' must be > 0/,
+    );
+  });
+});
+
+test("resolveConfig rejects invalid rehydration mode", () => {
+  withTempDir((cwd) => {
+    writeFileSync(
+      join(cwd, ".agent-workflow-kit.json"),
+      JSON.stringify({
+        context: {
+          rehydrationMode: "unknown-mode",
+        },
+      }),
+      "utf8",
+    );
+
+    assert.throws(
+      () => resolveConfig(cwd),
+      /Invalid 'context.rehydrationMode' in config file/,
+    );
+  });
+});

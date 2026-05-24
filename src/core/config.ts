@@ -34,6 +34,7 @@ export const defaultConfig: AgentWorkflowKitConfig = {
   },
   context: {
     enabled: true,
+    rehydrationMode: "summary",
     store: {
       kind: "file",
     },
@@ -41,6 +42,7 @@ export const defaultConfig: AgentWorkflowKitConfig = {
     rehydrateSubagentArtifacts: 2,
     retention: {
       maxRuns: 40,
+      maxSummaries: 5,
       maxDurableArtifactsPerRun: 6,
       maxEventsPerRun: 80,
     },
@@ -145,6 +147,8 @@ function mergeConfig(
     },
     context: {
       enabled: override.context?.enabled ?? base.context.enabled,
+      rehydrationMode:
+        override.context?.rehydrationMode ?? base.context.rehydrationMode,
       store: {
         kind: override.context?.store?.kind ?? base.context.store.kind,
         ...(override.context?.store?.filePath ?? base.context.store.filePath
@@ -163,6 +167,9 @@ function mergeConfig(
       retention: {
         maxRuns:
           override.context?.retention?.maxRuns ?? base.context.retention.maxRuns,
+        maxSummaries:
+          override.context?.retention?.maxSummaries ??
+          base.context.retention.maxSummaries,
         maxDurableArtifactsPerRun:
           override.context?.retention?.maxDurableArtifactsPerRun ??
           base.context.retention.maxDurableArtifactsPerRun,
@@ -210,6 +217,7 @@ function cloneConfig(config: AgentWorkflowKitConfig): AgentWorkflowKitConfig {
     },
     context: {
       enabled: config.context.enabled,
+      rehydrationMode: config.context.rehydrationMode,
       store: {
         kind: config.context.store.kind,
         ...(config.context.store.filePath
@@ -220,6 +228,7 @@ function cloneConfig(config: AgentWorkflowKitConfig): AgentWorkflowKitConfig {
       rehydrateSubagentArtifacts: config.context.rehydrateSubagentArtifacts,
       retention: {
         maxRuns: config.context.retention.maxRuns,
+        maxSummaries: config.context.retention.maxSummaries,
         maxDurableArtifactsPerRun: config.context.retention.maxDurableArtifactsPerRun,
         maxEventsPerRun: config.context.retention.maxEventsPerRun,
       },
@@ -281,6 +290,14 @@ function validateConfigOverride(value: unknown, source: string): asserts value i
 
     if (value.context.enabled !== undefined && typeof value.context.enabled !== "boolean") {
       throw new Error(`Invalid 'context.enabled' in config file: ${source}`);
+    }
+
+    if (
+      value.context.rehydrationMode !== undefined &&
+      value.context.rehydrationMode !== "summary" &&
+      value.context.rehydrationMode !== "artifact"
+    ) {
+      throw new Error(`Invalid 'context.rehydrationMode' in config file: ${source}`);
     }
 
     if (value.context.store !== undefined) {
@@ -356,6 +373,10 @@ function validateContextConfig(config: AgentWorkflowKitConfig): void {
     throw new Error("Invalid resolved config: unsupported context store kind");
   }
 
+  if (context.rehydrationMode !== "summary" && context.rehydrationMode !== "artifact") {
+    throw new Error("Invalid resolved config: unsupported context rehydration mode");
+  }
+
   if (context.store.filePath !== undefined && context.store.filePath.trim().length === 0) {
     throw new Error("Invalid resolved config: 'context.store.filePath' cannot be empty");
   }
@@ -370,6 +391,10 @@ function validateContextConfig(config: AgentWorkflowKitConfig): void {
 
   if (!isPositiveNumber(context.retention.maxRuns)) {
     throw new Error("Invalid resolved config: 'context.retention.maxRuns' must be > 0");
+  }
+
+  if (!isPositiveNumber(context.retention.maxSummaries)) {
+    throw new Error("Invalid resolved config: 'context.retention.maxSummaries' must be > 0");
   }
 
   if (!isNonNegativeNumber(context.retention.maxDurableArtifactsPerRun)) {
