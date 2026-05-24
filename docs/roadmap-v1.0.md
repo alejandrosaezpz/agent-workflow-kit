@@ -42,16 +42,16 @@ Current execution log for this roadmap:
 - phase status:
   - completed: Phase 1 (Lock v1.0 Scope)
   - completed: Phase 2 (Runtime Model And Contracts)
-  - partial: Phase 3 (Adaptive Orchestrator) — **pending: orchestrator-as-coordinator delegating via `task`**
-  - partial: Phase 4 (Interactive Explorer And Planner)
-  - partial: Phase 5 (Direct Subagent Entry Points) — **pending: agents are not yet truly independent; all point to same `workflow` agent**
-  - partial: Phase 6 (Context Persistence Without Context Bloat) — **pending: cross-phase context compression does not exist yet**
-  - partial: Phase 7 (Token Efficiency And Context Budgeting) — **pending: per-phase handoff budgets are not defined**
+  - completed: Phase 3 (Adaptive Orchestrator)
+  - completed: Phase 4 (Interactive Explorer And Planner)
+  - completed: Phase 5 (Direct Subagent Entry Points)
+  - completed: Phase 6 (Context Persistence Without Context Bloat)
+  - completed: Phase 7 (Token Efficiency And Context Budgeting)
   - completed: Phase 8 (Observability And Workflow Traceability)
   - not_started: Phase 9 (Real OpenCode Validation)
   - completed: Phase 10 (Stabilization, CI And Test Coverage)
   - completed: Phase 11 (OpenCode Compatibility And Adapter Stability)
-  - partial: Phase 12 (OSS And Public Release Readiness)
+  - completed: Phase 12 (OSS And Public Release Readiness)
   - completed: Phase 13 (Independent Agent Definitions)
   - completed: Phase 14 (Context Optimization Pipeline)
   - completed: Phase 15 (Cross-Iteration Context Efficiency)
@@ -100,8 +100,6 @@ Current execution log for this roadmap:
 - completed: Phase 8 observability criteria are covered through structured events, compact trace reports, and post-run explanations (`src/core/orchestrator.ts`, `src/core/contracts/workflow.ts`, `test/core/orchestrator.test.ts`)
 - completed: Phase 10 stabilization criteria are covered with expanded automated tests plus CI quality gates (`test/**/*.test.ts`, `.github/workflows/ci.yml`)
 - completed: Phase 11 compatibility criteria are covered with explicit adapter boundary, stability levels, and fallback/release validation guidance (`docs/opencode-adapter.md`, `docs/opencode-compatibility-v1.md`)
-- next: **Phase 14 — implement context optimization pipeline** (compressed handoffs between phases)
-- next: refactor `workflow` agent to delegate to independent agents via `task` instead of running phases in-process
 - next: update TypeScript contracts and installer to reflect the new multi-agent architecture
 - next: execute Phase 9 validation cases in real OpenCode sessions and attach evidence
 
@@ -113,6 +111,11 @@ Current execution log for this roadmap:
 - completed: tests now cover handoff transitions, handoff budget trimming, degraded handoff shape fallback, and config validation (`test/core/orchestrator.test.ts`, `test/core/config.test.ts`)
 - completed: cross-iteration summaries are now persisted and used as default rehydration path with configurable summary retention (`src/core/context-store.ts`, `src/core/orchestrator.ts`, `src/core/config.ts`)
 - completed: context rehydration mode now supports explicit summary-first vs artifact mode (`src/core/contracts/agent.ts`, `src/core/config.ts`, `src/core/orchestrator.ts`)
+- completed: workflow delegation skeleton now defined so full workflow runs coordinate phases via `task` to independent role agents (`adapters/opencode/assets/workflow-agent.md`, `adapters/opencode/assets/workflow-instructions.md`)
+- completed: workflow delegation hardening now defines per-phase trace blocks, clarification turn limits, assumption fallback, and structured failure reporting (`adapters/opencode/assets/workflow-agent.md`, `adapters/opencode/assets/workflow-instructions.md`)
+- completed: contributor documentation added for setup, validation, and PR expectations (`CONTRIBUTING.md`)
+- completed: reproducible public demo flow documented for workflow and direct subagent paths (`docs/demo-v1.0-quickstart.md`)
+- completed: draft release notes prepared with guarantees, limits, and pre-publish checks (`docs/release-notes-v1.0.0-draft.md`)
 
 This section should be updated as each roadmap phase lands so contributors can see what is done and what comes next.
 
