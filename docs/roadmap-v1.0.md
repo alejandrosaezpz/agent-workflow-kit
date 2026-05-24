@@ -53,7 +53,7 @@ Current execution log for this roadmap:
   - completed: Phase 11 (OpenCode Compatibility And Adapter Stability)
   - partial: Phase 12 (OSS And Public Release Readiness)
   - completed: Phase 13 (Independent Agent Definitions)
-  - not_started: Phase 14 (Context Optimization Pipeline)
+  - completed: Phase 14 (Context Optimization Pipeline)
   - not_started: Phase 15 (Cross-Iteration Context Efficiency)
 
 - completed: `docs/runtime-model-v1.md` created with `v1.0` runtime contracts and lifecycle model
@@ -109,6 +109,9 @@ Current execution log for this roadmap:
 - completed: independent subagent definitions added for explorer/planner/implementer/reviewer/tester (`adapters/opencode/assets/*-agent.md`)
 - completed: OpenCode command routing now points direct slash commands to role-specific subagents instead of `workflow` (`adapters/opencode/assets/opencode.workflow.json`)
 - completed: adapter managed files now deploy independent role agents (`src/adapters/opencode/index.ts`)
+- completed: phase-handoff schemas and target budgets documented for workflow coordination (`adapters/opencode/assets/workflow-agent.md`, `adapters/opencode/assets/workflow-instructions.md`, `docs/runtime-model-v1.md`, `src/core/contracts/workflow.ts`)
+- completed: runtime now creates structured per-phase handoff artifacts, enforces configurable handoff budgets, and emits handoff trace events (`src/core/orchestrator.ts`, `src/core/config.ts`, `src/core/contracts/agent.ts`, `src/core/contracts/workflow.ts`)
+- completed: tests now cover handoff transitions, handoff budget trimming, degraded handoff shape fallback, and config validation (`test/core/orchestrator.test.ts`, `test/core/config.test.ts`)
 
 This section should be updated as each roadmap phase lands so contributors can see what is done and what comes next.
 
@@ -612,7 +615,7 @@ Dependencies:
 - Requires OpenCode to support multiple registered subagents with independent contexts
 - Requires the installer to handle agent files (already supported via `OpenCodeManagedFile` with type `"agent"`)
 
-## Phase 14 - Context Optimization Pipeline (NEW — not started)
+## Phase 14 - Context Optimization Pipeline (NEW — completed)
 
 Objective:
 Design and implement the pipeline that compresses and passes context between phases within a single workflow run, ensuring each agent receives only what it needs and the active chat does not bloat.

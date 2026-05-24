@@ -63,3 +63,26 @@ test("resolveConfig rejects invalid budget values in local config", () => {
     );
   });
 });
+
+test("resolveConfig rejects invalid phase handoff budget values", () => {
+  withTempDir((cwd) => {
+    writeFileSync(
+      join(cwd, ".agent-workflow-kit.json"),
+      JSON.stringify({
+        context: {
+          budget: {
+            phaseHandoffCharLimit: {
+              explorerToPlanner: 0,
+            },
+          },
+        },
+      }),
+      "utf8",
+    );
+
+    assert.throws(
+      () => resolveConfig(cwd),
+      /Invalid resolved config: invalid phase handoff budget for 'explorerToPlanner'/,
+    );
+  });
+});

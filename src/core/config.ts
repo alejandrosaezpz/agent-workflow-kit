@@ -57,6 +57,13 @@ export const defaultConfig: AgentWorkflowKitConfig = {
         reviewer: 2200,
         tester: 2200,
       },
+      phaseHandoffCharLimit: {
+        explorerToPlanner: 2000,
+        plannerToImplementer: 1600,
+        implementerToReviewer: 1200,
+        reviewerToTester: 1200,
+        testerToStorage: 1600,
+      },
     },
   },
   agents: Object.fromEntries(
@@ -183,6 +190,10 @@ function mergeConfig(
           ...base.context.budget.perRoleTaskCharLimit,
           ...override.context?.budget?.perRoleTaskCharLimit,
         },
+        phaseHandoffCharLimit: {
+          ...base.context.budget.phaseHandoffCharLimit,
+          ...override.context?.budget?.phaseHandoffCharLimit,
+        },
       },
     },
     agents: mergedAgents,
@@ -221,6 +232,9 @@ function cloneConfig(config: AgentWorkflowKitConfig): AgentWorkflowKitConfig {
           config.context.budget.maxEstimatedTrimmedTokensWarning,
         perRoleTaskCharLimit: {
           ...config.context.budget.perRoleTaskCharLimit,
+        },
+        phaseHandoffCharLimit: {
+          ...config.context.budget.phaseHandoffCharLimit,
         },
       },
     },
@@ -395,6 +409,14 @@ function validateContextConfig(config: AgentWorkflowKitConfig): void {
   for (const [role, value] of Object.entries(context.budget.perRoleTaskCharLimit)) {
     if (!isAgentRole(role) || !isPositiveNumber(value)) {
       throw new Error(`Invalid resolved config: invalid per-role budget for '${role}'`);
+    }
+  }
+
+  for (const [field, value] of Object.entries(context.budget.phaseHandoffCharLimit)) {
+    if (!isPositiveNumber(value)) {
+      throw new Error(
+        `Invalid resolved config: invalid phase handoff budget for '${field}'`,
+      );
     }
   }
 }

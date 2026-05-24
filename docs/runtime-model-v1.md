@@ -100,6 +100,59 @@ Durability levels:
 
 The orchestrator should prefer passing artifact references and compact summaries over raw transcript replay.
 
+## Phase-Handoff Schemas (Phase 14 baseline)
+
+Within a workflow run, each phase should pass a compact structured handoff instead of full transcript history.
+
+Explorer -> Planner:
+
+- `summary`
+- `findings[]`
+- `constraints[]`
+- `relevantFiles[]`
+- `openQuestions[]`
+
+Planner -> Implementer:
+
+- `approvedPlan`
+- `requirements[]`
+- `architectureDecisions[]`
+- `tradeoffs[]`
+
+Implementer -> Reviewer:
+
+- `changesMade[]`
+- `filesTouched[]`
+- `diffSummary`
+- `warnings[]`
+
+Reviewer -> Tester:
+
+- `reviewFindings[]`
+- `risks[]`
+- `regressionsFound[]`
+- `missingCoverage[]`
+
+Tester -> final storage summary:
+
+- `validationResult` (`pass` | `partial` | `fail`)
+- `checksExecuted[]`
+- `gaps[]`
+- `coverageReport`
+
+Guidance budgets per handoff:
+
+- Explorer -> Planner: ~500 tokens
+- Planner -> Implementer: ~400 tokens
+- Implementer -> Reviewer: ~300 tokens
+- Reviewer -> Tester: ~300 tokens
+- Tester -> storage summary: ~400 tokens
+
+No-bloat rule:
+
+- active orchestrator context should retain the original goal plus compact phase outputs
+- raw subagent transcript replay is fallback only
+
 ## Context Layers
 
 `v1.0` context is layered:

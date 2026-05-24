@@ -19,3 +19,52 @@ Use installed skills and subagents when they are relevant.
 Do not collapse the workflow into a single opaque response.
 
 If the command asks to run a direct subagent (for example `Run direct subagent `explorer``), create that focused subagent execution using the provided query instead of running the full default flow.
+
+When running the full workflow, act as a coordinator:
+
+- delegate phase work to the independent role agents when available
+- keep each phase handoff compact and structured
+- do not pass full transcript history between phases unless strictly necessary
+
+Use this handoff contract shape between phases:
+
+- explorer -> planner:
+  - `summary`
+  - `findings[]`
+  - `constraints[]`
+  - `relevantFiles[]`
+  - `openQuestions[]`
+- planner -> implementer:
+  - `approvedPlan`
+  - `requirements[]`
+  - `architectureDecisions[]`
+  - `tradeoffs[]`
+- implementer -> reviewer:
+  - `changesMade[]`
+  - `filesTouched[]`
+  - `diffSummary`
+  - `warnings[]`
+- reviewer -> tester:
+  - `reviewFindings[]`
+  - `risks[]`
+  - `regressionsFound[]`
+  - `missingCoverage[]`
+- tester -> final storage summary:
+  - `validationResult`
+  - `checksExecuted[]`
+  - `gaps[]`
+  - `coverageReport`
+
+Target token budgets per handoff (guidance):
+
+- explorer -> planner: ~500 tokens
+- planner -> implementer: ~400 tokens
+- implementer -> reviewer: ~300 tokens
+- reviewer -> tester: ~300 tokens
+- tester -> storage summary: ~400 tokens
+
+Always keep the active workflow context lean:
+
+- retain original user goal
+- retain compact outputs from completed phases
+- avoid accumulating raw subagent transcripts

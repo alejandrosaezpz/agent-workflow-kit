@@ -268,6 +268,119 @@ test("runWorkflow includes post-run report with decision metrics", async () => {
   assert.ok(result.outcome.explanation.includes("Estimated final task tokens:"));
 });
 
+test("runWorkflow creates phase handoff artifacts and events", async () => {
+  const orchestrator = new Orchestrator(defaultAgents);
+  const result = await orchestrator.runWorkflow(
+    "prepare a scoped refactor plan",
+    "/tmp/workspace",
+    makeResolvedConfig(),
+    {
+      interaction: {
+        async requestApproval() {
+          return true;
+        },
+      },
+    },
+  );
+
+  const handoffEvents = result.workflowRun.events.filter(
+    (event) => event.type === "phase_handoff_created",
+  );
+  assert.equal(handoffEvents.length, 4);
+
+  const handoffArtifacts = result.workflowRun.artifacts.filter((artifact) =>
+    artifact.kind.includes("-handoff"),
+  );
+  assert.equal(handoffArtifacts.length, 4);
+  assert.ok(handoffArtifacts.every((artifact) => artifact.durability === "ephemeral"));
+
+  const handoffKinds = handoffArtifacts.map((artifact) => artifact.kind);
+  assert.ok(handoffKinds.includes("explorer-to-planner-handoff"));
+  assert.ok(handoffKinds.includes("planner-to-implementer-handoff"));
+  assert.ok(handoffKinds.includes("implementer-to-reviewer-handoff"));
+  assert.ok(handoffKinds.includes("reviewer-to-tester-handoff"));
+});
+
+test("runWorkflow applies budget to oversized phase handoff", async () => {
+  const oversizedExplorerAgents: AgentDefinition[] = defaultAgents.map((agent) => {
+    if (agent.role !== "explorer") {
+      return agent;
+    }
+
+    return {
+      ...agent,
+      async run(_input, context) {
+        return {
+          role: "explorer" as const,
+          summary: `oversized-${"x".repeat(6000)}`,
+          details: {
+            task: context.task,
+          },
+        };
+      },
+    };
+  });
+  const orchestrator = new Orchestrator(oversizedExplorerAgents);
+
+  const result = await orchestrator.runWorkflow(
+    "run oversized handoff path",
+    "/tmp/workspace",
+    makeResolvedConfig(),
+    {
+      interaction: {
+        async requestApproval() {
+          return true;
+        },
+      },
+    },
+  );
+
+  const handoffBudgetEvent = result.workflowRun.events.find(
+    (event) =>
+      event.type === "context_budget_applied" &&
+      (event.payload as { field?: string }).field === "phase_handoff",
+  );
+  assert.ok(Boolean(handoffBudgetEvent));
+  assert.ok(result.outcome.report.handoffBudgetApplications >= 1);
+});
+
+test("runWorkflow emits required handoff shape with degraded defaults", async () => {
+  const orchestrator = new Orchestrator(defaultAgents);
+  const result = await orchestrator.runWorkflow(
+    "validate handoff fallback shape",
+    "/tmp/workspace",
+    makeResolvedConfig(),
+    {
+      interaction: {
+        async requestApproval() {
+          return true;
+        },
+      },
+    },
+  );
+
+  const explorerToPlanner = result.workflowRun.artifacts.find(
+    (artifact) => artifact.kind === "explorer-to-planner-handoff",
+  );
+  assert.ok(explorerToPlanner);
+  const payload = (explorerToPlanner?.data as { handoff?: string }).handoff;
+  assert.ok(typeof payload === "string");
+
+  const parsed = JSON.parse(payload ?? "{}") as {
+    summary?: string;
+    findings?: string[];
+    constraints?: string[];
+    relevantFiles?: string[];
+    openQuestions?: string[];
+  };
+
+  assert.ok(typeof parsed.summary === "string");
+  assert.ok(Array.isArray(parsed.findings));
+  assert.ok(Array.isArray(parsed.constraints));
+  assert.ok(Array.isArray(parsed.relevantFiles));
+  assert.ok(Array.isArray(parsed.openQuestions));
+});
+
 test("runSubagent applies subagent task budget", async () => {
   const orchestrator = new Orchestrator(defaultAgents);
   const result = await orchestrator.runSubagent(

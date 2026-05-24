@@ -52,3 +52,46 @@ Validate the result and report what was checked and what remains unverified.
 - Reuse installed workflow skills when available.
 - Prefer global configuration, with local project overrides when present.
 - Do not replace unrelated OpenCode configuration.
+
+## Phase-Handoff Guidance (Phase 14 baseline)
+
+When orchestrating the full workflow, prefer structured compact handoffs over transcript replay.
+
+Use these handoff schemas:
+
+- Explorer -> Planner
+  - `summary`
+  - `findings[]`
+  - `constraints[]`
+  - `relevantFiles[]`
+  - `openQuestions[]`
+- Planner -> Implementer
+  - `approvedPlan`
+  - `requirements[]`
+  - `architectureDecisions[]`
+  - `tradeoffs[]`
+- Implementer -> Reviewer
+  - `changesMade[]`
+  - `filesTouched[]`
+  - `diffSummary`
+  - `warnings[]`
+- Reviewer -> Tester
+  - `reviewFindings[]`
+  - `risks[]`
+  - `regressionsFound[]`
+  - `missingCoverage[]`
+- Tester -> Final summary
+  - `validationResult`
+  - `checksExecuted[]`
+  - `gaps[]`
+  - `coverageReport`
+
+Target handoff budgets (guidance):
+
+- Explorer -> Planner: ~500 tokens
+- Planner -> Implementer: ~400 tokens
+- Implementer -> Reviewer: ~300 tokens
+- Reviewer -> Tester: ~300 tokens
+- Tester -> Final summary: ~400 tokens
+
+Rule: keep only compact per-phase outputs in active context. Raw transcript replay is fallback only.

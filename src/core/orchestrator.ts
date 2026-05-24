@@ -6,9 +6,14 @@ import {
 import { type ResolvedConfig } from "./config";
 import { type WorkflowContextStore } from "./context-store";
 import {
+  type ExplorerHandoffData,
+  type ImplementerHandoffData,
+  type PlannerHandoffData,
+  type ReviewerHandoffData,
   type RunReport,
   type RoutingDecision,
   type RunOutcome,
+  type TesterHandoffData,
   type WorkflowArtifact,
   type WorkflowEvent,
   type WorkflowRun,
@@ -475,7 +480,11 @@ export class Orchestrator {
         payload: { role },
       });
 
-      const roleBudget = this.getRoleTaskBudget(role, budget.maxWorkflowTaskChars, budget);
+      const roleBudget = this.getRoleTaskBudget(
+        role,
+        budget.maxWorkflowTaskChars,
+        budget,
+      );
       const taskForRole = this.applyTextBudget({
         runId,
         events,
@@ -560,6 +569,51 @@ export class Orchestrator {
           durability: artifact.durability,
         },
       });
+
+      const nextRole = this.getNextRole(selectedRoles, role);
+
+      if (nextRole) {
+        const handoffText = this.buildPhaseHandoffText(role, result);
+        const handoffBudget = this.getPhaseHandoffBudget(
+          role,
+          nextRole,
+          budget.phaseHandoffCharLimit,
+        );
+        const boundedHandoff = this.applyTextBudget({
+          runId,
+          events,
+          field: "phase_handoff",
+          maxChars: handoffBudget,
+          value: handoffText,
+          warningState: budgetWarningState,
+        });
+        const handoffArtifact = this.createHandoffArtifact(role, nextRole, boundedHandoff);
+        artifacts.push(handoffArtifact);
+
+        this.pushEvent(events, {
+          runId,
+          type: "phase_handoff_created",
+          reason: `${role} handoff prepared for ${nextRole}`,
+          contextRef: {
+            artifactIds: [handoffArtifact.id],
+          },
+          payload: {
+            fromRole: role,
+            toRole: nextRole,
+            handoffChars: boundedHandoff.length,
+            budgetChars: handoffBudget,
+          },
+        });
+
+        effectiveTask = this.applyTextBudget({
+          runId,
+          events,
+          field: "workflow_task",
+          maxChars: budget.maxWorkflowTaskChars,
+          value: `Original request:\n${task}\n\nHandoff for ${nextRole}:\n${boundedHandoff}`,
+          warningState: budgetWarningState,
+        });
+      }
 
       if (checkpointRoles.includes(role)) {
         activeStatus = "needs_approval";
@@ -999,7 +1053,8 @@ export class Orchestrator {
       | "subagent_task"
       | "rehydrated_context"
       | "clarification"
-      | "role_task";
+      | "role_task"
+      | "phase_handoff";
     maxChars: number;
     value: string;
     warningState?: BudgetWarningState;
@@ -1142,6 +1197,14 @@ export class Orchestrator {
     const budgetWarnings = run.events.filter(
       (event) => event.type === "context_budget_warning",
     ).length;
+    const handoffsCreated = run.events.filter(
+      (event) => event.type === "phase_handoff_created",
+    ).length;
+    const handoffBudgetApplications = run.events.filter(
+      (event) =>
+        event.type === "context_budget_applied" &&
+        (event.payload as { field?: string }).field === "phase_handoff",
+    ).length;
     const rehydratedArtifacts = run.events
       .filter((event) => event.type === "context_rehydrated")
       .reduce((count, event) => {
@@ -1165,6 +1228,8 @@ export class Orchestrator {
       estimatedFinalTaskTokens,
       estimatedTrimmedTokens,
       budgetWarnings,
+      handoffsCreated,
+      handoffBudgetApplications,
     };
   }
 
@@ -1176,6 +1241,8 @@ export class Orchestrator {
       `Clarification questions: ${report.clarificationQuestions}.`,
       `Critical concerns: ${report.criticalConcernsRaised}.`,
       `Budget trims: ${report.budgetApplications}.`,
+      `Handoffs created: ${report.handoffsCreated}.`,
+      `Handoff trims: ${report.handoffBudgetApplications}.`,
       `Rehydrated artifacts: ${report.rehydratedArtifacts}.`,
       `Estimated final task tokens: ${report.estimatedFinalTaskTokens}.`,
       `Estimated trimmed tokens: ${report.estimatedTrimmedTokens}.`,
@@ -1227,5 +1294,145 @@ export class Orchestrator {
     }
 
     return "Unknown execution error";
+  }
+
+  private getNextRole(
+    selectedRoles: AgentRole[],
+    currentRole: AgentRole,
+  ): AgentRole | undefined {
+    const index = selectedRoles.indexOf(currentRole);
+
+    if (index < 0 || index === selectedRoles.length - 1) {
+      return undefined;
+    }
+
+    return selectedRoles[index + 1];
+  }
+
+  private getPhaseHandoffBudget(
+    fromRole: AgentRole,
+    toRole: AgentRole,
+    phaseHandoffBudget: {
+      explorerToPlanner: number;
+      plannerToImplementer: number;
+      implementerToReviewer: number;
+      reviewerToTester: number;
+      testerToStorage: number;
+    },
+  ): number {
+    if (fromRole === "explorer" && toRole === "planner") {
+      return phaseHandoffBudget.explorerToPlanner;
+    }
+
+    if (fromRole === "planner" && toRole === "implementer") {
+      return phaseHandoffBudget.plannerToImplementer;
+    }
+
+    if (fromRole === "implementer" && toRole === "reviewer") {
+      return phaseHandoffBudget.implementerToReviewer;
+    }
+
+    if (fromRole === "reviewer" && toRole === "tester") {
+      return phaseHandoffBudget.reviewerToTester;
+    }
+
+    return phaseHandoffBudget.testerToStorage;
+  }
+
+  private createHandoffArtifact(
+    fromRole: AgentRole,
+    toRole: AgentRole,
+    handoffText: string,
+  ): WorkflowArtifact {
+    return {
+      id: this.createId("artifact"),
+      kind: `${fromRole}-to-${toRole}-handoff`,
+      producerRole: "orchestrator",
+      summary: `Handoff from ${fromRole} to ${toRole}`,
+      createdAt: this.nowIso(),
+      durability: "ephemeral",
+      data: {
+        fromRole,
+        toRole,
+        handoff: handoffText,
+      },
+    };
+  }
+
+  private buildPhaseHandoffText(role: AgentRole, result: AgentResult): string {
+    const details = result.details as Record<string, unknown>;
+
+    if (role === "explorer") {
+      const findings = this.toStringArray(details.findings);
+      const handoff: ExplorerHandoffData = {
+        summary: result.summary,
+        findings: findings.length > 0 ? findings : [result.summary],
+        constraints: this.toStringArray(details.constraints),
+        relevantFiles: this.toStringArray(details.relevantFiles),
+        openQuestions: this.toStringArray(details.openQuestions),
+      };
+      return JSON.stringify(handoff);
+    }
+
+    if (role === "planner") {
+      const requirements = this.toStringArray(details.requirements);
+      const handoff: PlannerHandoffData = {
+        approvedPlan: result.summary,
+        requirements: requirements.length > 0 ? requirements : [result.summary],
+        architectureDecisions: this.toStringArray(details.architectureDecisions),
+        tradeoffs: this.toStringArray(details.tradeoffs),
+      };
+      return JSON.stringify(handoff);
+    }
+
+    if (role === "implementer") {
+      const changesMade = this.toStringArray(details.changesMade);
+      const handoff: ImplementerHandoffData = {
+        changesMade: changesMade.length > 0 ? changesMade : [result.summary],
+        filesTouched: this.toStringArray(details.filesTouched),
+        diffSummary:
+          this.toStringValue(details.diffSummary) ?? result.summary,
+        warnings: this.toStringArray(details.warnings),
+      };
+      return JSON.stringify(handoff);
+    }
+
+    if (role === "reviewer") {
+      const reviewFindings = this.toStringArray(details.reviewFindings);
+      const handoff: ReviewerHandoffData = {
+        reviewFindings:
+          reviewFindings.length > 0 ? reviewFindings : [result.summary],
+        risks: this.toStringArray(details.risks),
+        regressionsFound: this.toStringArray(details.regressionsFound),
+        missingCoverage: this.toStringArray(details.missingCoverage),
+      };
+      return JSON.stringify(handoff);
+    }
+
+    const validationResult = this.toStringValue(details.validationResult);
+    const handoff: TesterHandoffData = {
+      validationResult:
+        validationResult === "pass" ||
+        validationResult === "partial" ||
+        validationResult === "fail"
+          ? validationResult
+          : "partial",
+      checksExecuted: this.toStringArray(details.checksExecuted),
+      gaps: this.toStringArray(details.gaps),
+      coverageReport: this.toStringValue(details.coverageReport) ?? result.summary,
+    };
+    return JSON.stringify(handoff);
+  }
+
+  private toStringArray(value: unknown): string[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value.filter((entry): entry is string => typeof entry === "string");
+  }
+
+  private toStringValue(value: unknown): string | undefined {
+    return typeof value === "string" ? value : undefined;
   }
 }

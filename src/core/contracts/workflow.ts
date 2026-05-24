@@ -19,6 +19,7 @@ export type WorkflowEventType =
   | "routing_decided"
   | "subagent_started"
   | "subagent_completed"
+  | "phase_handoff_created"
   | "question_asked"
   | "user_answer_received"
   | "approval_requested"
@@ -50,6 +51,50 @@ export interface RoutingDecision {
 export interface ContextReference {
   artifactIds: string[];
   note?: string;
+}
+
+export interface ExplorerHandoffData {
+  summary: string;
+  findings: string[];
+  constraints: string[];
+  relevantFiles: string[];
+  openQuestions: string[];
+}
+
+export interface PlannerHandoffData {
+  approvedPlan: string;
+  requirements: string[];
+  architectureDecisions: string[];
+  tradeoffs: string[];
+}
+
+export interface ImplementerHandoffData {
+  changesMade: string[];
+  filesTouched: string[];
+  diffSummary: string;
+  warnings: string[];
+}
+
+export interface ReviewerHandoffData {
+  reviewFindings: string[];
+  risks: string[];
+  regressionsFound: string[];
+  missingCoverage: string[];
+}
+
+export interface TesterHandoffData {
+  validationResult: "pass" | "partial" | "fail";
+  checksExecuted: string[];
+  gaps: string[];
+  coverageReport: string;
+}
+
+export interface PhaseHandoffBudgetTargets {
+  explorerToPlanner: number;
+  plannerToImplementer: number;
+  implementerToReviewer: number;
+  reviewerToTester: number;
+  testerToStorage: number;
 }
 
 export interface WorkflowEvent<TPayload = Record<string, unknown>> {
@@ -89,6 +134,8 @@ export interface RunReport {
   estimatedFinalTaskTokens: number;
   estimatedTrimmedTokens: number;
   budgetWarnings: number;
+  handoffsCreated: number;
+  handoffBudgetApplications: number;
 }
 
 export interface RunOutcome {

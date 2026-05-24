@@ -37,6 +37,13 @@ export interface ContextBudgetSettings {
   maxClarificationChars: number;
   maxEstimatedTrimmedTokensWarning: number;
   perRoleTaskCharLimit: Partial<Record<AgentRole, number>>;
+  phaseHandoffCharLimit: {
+    explorerToPlanner: number;
+    plannerToImplementer: number;
+    implementerToReviewer: number;
+    reviewerToTester: number;
+    testerToStorage: number;
+  };
 }
 
 export interface ContextSettings {
